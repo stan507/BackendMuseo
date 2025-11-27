@@ -25,3 +25,5 @@ export const MINIO_BUCKET_NAME = process.env.MINIO_BUCKET_NAME;
 
 export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
 export const cookieKey = process.env.cookieKey;
+export const JWT_SECRET = process.env.JWT_SECRET;
+export const UNITY_API_KEY = process.env.UNITY_API_KEY;

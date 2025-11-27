@@ -1,0 +1,40 @@
+"use strict";
+import { EntitySchema } from "typeorm";
+
+export const Quizz = new EntitySchema({
+    name: "Quizz",
+    tableName: "quizz",
+    columns: {
+        id_quizz: {
+            type: "int",
+            primary: true,
+            generated: true,
+        },
+        id_usuario: {
+            type: "uuid",
+            nullable: false,
+        },
+        titulo: {
+            type: "varchar",
+            length: 255,
+            nullable: false,
+        },
+        cant_preguntas: {
+            type: "int",
+            nullable: false,
+        },
+        fecha_creacion: {
+            type: "timestamp",
+            nullable: false,
+            default: () => "CURRENT_TIMESTAMP",
+        },
+    },
+    relations: {
+        usuario: {
+            type: "many-to-one",
+            target: "Usuario",
+            joinColumn: { name: "id_usuario" },
+            onDelete: "CASCADE",
+        },
+    },
+});

@@ -22,16 +22,37 @@ app.use("/api", router);
  * Función principal para arrancar el servidor
  */
 async function startServer() {
+    try {
+        // 1. Intentar conectarse a la base de datos PRIMERO
+        await connectDB();
 
-    // 1. Intentar conectarse a la base de datos PRIMERO
-    await connectDB();
+        // 2. Poblar la base de datos con datos iniciales si está vacía
+        const { seedDatabase } = await import('./config/initialSetup.js');
+        await seedDatabase();
 
-    // 2. Si la conexión a la DB fue exitosa, iniciar el servidor web
-    app.listen(port, () => {
-        console.log(`Backend del Museo escuchando en http://localhost:${port}`);
-        console.log("Rutas de API disponibles en: http://localhost:3000/api/museo");
-    });
+        // 3. Si todo fue exitoso, iniciar el servidor web
+        const server = app.listen(port, () => {
+            console.log(`Backend del Museo escuchando en http://localhost:${port}`);
+            console.log("Rutas de API disponibles en: http://localhost:3000/api/museo");
+        });
+
+        // Mantener el proceso vivo
+        process.on('SIGINT', () => {
+            console.log('Cerrando servidor...');
+            server.close(() => {
+                console.log('Servidor cerrado');
+                process.exit(0);
+            });
+        });
+
+    } catch (error) {
+        console.error("Error fatal al iniciar el servidor:", error);
+        process.exit(1);
+    }
 }
 
 // --- Encender ---
-startServer();
+startServer().catch(err => {
+    console.error("Error no capturado:", err);
+    process.exit(1);
+});

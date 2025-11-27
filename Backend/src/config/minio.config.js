@@ -11,8 +11,8 @@ import {
 
 export const minioClient = new Client({
     endPoint: MINIO_ENDPOINT,
-    port: parseInt(MINIO_PORT, 10), // parseInt es importante
-    useSSL: MINIO_USE_SSL === "true", // Convertimos el string a boolean
+    port: parseInt(MINIO_PORT, 10), 
+    useSSL: MINIO_USE_SSL === "true",
     accessKey: MINIO_ACCESS_KEY,
     secretKey: MINIO_SECRET_KEY,
 });
