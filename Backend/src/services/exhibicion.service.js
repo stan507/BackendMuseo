@@ -3,6 +3,19 @@
 import { AppDataSource } from "../config/configDb.js";
 import { Exhibicion } from "../entity/Exhibicion.entity.js";
 
+// Obtener todas las exhibiciones
+export async function getAllExhibicionesService() {
+    try {
+        const exhibicionRepo = AppDataSource.getRepository(Exhibicion);
+        const exhibiciones = await exhibicionRepo.find();
+        
+        return [exhibiciones, null];
+    } catch (error) {
+        console.error("Error en getAllExhibicionesService:", error);
+        return [null, "Error al obtener exhibiciones"];
+    }
+}
+
 export async function obtenerExhibicionCompletaPorId(idExhibicion) {
     try {
         const exhibicionRepo = AppDataSource.getRepository(Exhibicion);

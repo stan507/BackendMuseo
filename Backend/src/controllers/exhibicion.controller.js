@@ -2,6 +2,31 @@
 
 import * as RelatoService from "../services/exhibicion.service.js";
 
+// Obtener todas las exhibiciones
+export const getAllExhibiciones = async (req, res) => {
+    try {
+        const [exhibiciones, error] = await RelatoService.getAllExhibicionesService();
+        
+        if (error) {
+            return res.status(500).json({
+                message: error,
+                data: null
+            });
+        }
+        
+        res.status(200).json({
+            message: "Exhibiciones obtenidas exitosamente",
+            data: exhibiciones
+        });
+    } catch (error) {
+        console.error("Error en getAllExhibiciones:", error);
+        res.status(500).json({
+            message: "Error interno del servidor",
+            data: null
+        });
+    }
+};
+
 export const obtenerExhibicion = async (req, res) => {
     try {
         // El middleware ya validó que idExhibicion existe y no es vacío

@@ -7,6 +7,9 @@ import { authenticate, authenticateAdmin } from "../middlewares/auth.middleware.
 
 const router = Router();
 
+// GET todas las exhibiciones - protegido
+router.get("/", authenticate, RelatoController.getAllExhibiciones);
+
 // GET por ID - protegido (Unity o Admin)
 router.get("/:idExhibicion", authenticate, validate(getSchema, 'params'), RelatoController.obtenerExhibicion);
 

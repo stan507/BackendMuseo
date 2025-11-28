@@ -1,9 +1,10 @@
 "use strict";
 import { Router } from 'express';
-import {  handleGetUrl, handleListFiles } from '../controllers/minIO.controller.js';
+import { handleGetUrl, handleListFiles, handleUploadFile, handleDeleteFile } from '../controllers/minIO.controller.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { getPresignedUrlSchema, listFilesSchema } from '../validations/minIO.validation.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
+import { upload } from '../config/multer.config.js';
 
 const router = Router();
 
@@ -11,6 +12,10 @@ const router = Router();
 router.get("/presigned-url", authenticate, validate(getPresignedUrlSchema, 'query'), handleGetUrl);
 router.get("/list-files", authenticate, validate(listFilesSchema, 'query'), handleListFiles);
 
-// (Aquí pondremos después las rutas del admin, como POST /upload, DELETE /file, etc.)
+// Upload de archivo (solo admin/encargado)
+router.post("/upload", authenticate, upload.single('file'), handleUploadFile);
+
+// Delete de archivo (solo admin/encargado)
+router.delete("/file", authenticate, handleDeleteFile);
 
 export default router;

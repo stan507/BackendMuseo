@@ -24,6 +24,11 @@ export const Visita = new EntitySchema({
             nullable: false,
             default: () => "CURRENT_TIMESTAMP",
         },
+        duracion_segundos: {
+            type: "int",
+            nullable: true,
+            default: null,
+        },
     },
     relations: {
         usuario: {

@@ -28,5 +28,14 @@ export const createRespondeSchema = Joi.object({
             "number.integer": "El número de respuestas correctas debe ser un número entero",
             "number.min": "El número de respuestas correctas no puede ser negativo",
             "any.required": "El número de respuestas correctas es requerido"
+        }),
+    tiempo_segundos: Joi.number()
+        .integer()
+        .min(0)
+        .optional()
+        .messages({
+            "number.base": "El tiempo debe ser un número",
+            "number.integer": "El tiempo debe ser un número entero",
+            "number.min": "El tiempo no puede ser negativo"
         })
 });

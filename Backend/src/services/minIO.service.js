@@ -24,6 +24,35 @@ export const subirArchivo = async (file, objectKey) => {
 };
 
 /**
+ * UPLOAD: Sube un archivo a MinIO en la estructura museo/subcarpeta/tipo/archivo
+ * @param {Buffer} fileBuffer - Buffer del archivo
+ * @param {string} subcarpeta - huemul, helice, chemomul, cocodrilo
+ * @param {string} tipoArchivo - videos, fotos, audios, modelo3D, textura
+ * @param {string} nombreArchivo - Nombre del archivo
+ * @param {string} mimetype - Tipo MIME del archivo
+ */
+export const uploadFileService = async (fileBuffer, subcarpeta, tipoArchivo, nombreArchivo, mimetype) => {
+    try {
+        // Construir path: subcarpeta/tipoArchivo/nombreArchivo
+        const objectPath = `${subcarpeta}/${tipoArchivo}/${nombreArchivo}`;
+        
+        await minioClient.putObject(
+            bucketName,
+            objectPath,
+            fileBuffer,
+            fileBuffer.length,
+            { 'Content-Type': mimetype }
+        );
+        
+        console.log(`[MinIO] Archivo subido: ${objectPath}`);
+        return [{ path: objectPath, filename: nombreArchivo }, null];
+    } catch (error) {
+        console.error("Error en uploadFileService:", error);
+        return [null, "Error al subir el archivo a MinIO"];
+    }
+};
+
+/**
  * BORRAR: Elimina un objeto del bucket de Minio.
  */
 export const deleteFile = async (objectName) => {
@@ -37,6 +66,29 @@ export const deleteFile = async (objectName) => {
     } catch (error) {
         console.error(`Error al eliminar el archivo '${objectName}':`, error);
         return [false, 'Error al eliminar el archivo.'];
+    }
+};
+
+/**
+ * DELETE: Elimina un archivo de MinIO por path completo
+ * @param {string} filePath - Path completo del archivo (ej: huemul/fotos/foto1.jpg)
+ */
+export const deleteFileService = async (filePath) => {
+    try {
+        // Verificar si el archivo existe
+        await minioClient.statObject(bucketName, filePath);
+        
+        // Eliminar archivo
+        await minioClient.removeObject(bucketName, filePath);
+        
+        console.log(`[MinIO] Archivo eliminado: ${filePath}`);
+        return [{ message: "Archivo eliminado exitosamente" }, null];
+    } catch (error) {
+        if (error.code === 'NotFound') {
+            return [null, "Archivo no encontrado"];
+        }
+        console.error("Error en deleteFileService:", error);
+        return [null, "Error al eliminar el archivo"];
     }
 };
 

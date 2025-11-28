@@ -23,6 +23,11 @@ export const Responde = new EntitySchema({
             nullable: false,
             default: 0,
         },
+        tiempo_segundos: {
+            type: "int",
+            nullable: true,
+            default: null,
+        },
         fecha_responde: {
             type: "timestamp",
             nullable: false,

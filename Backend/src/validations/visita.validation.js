@@ -17,3 +17,16 @@ export const createVisitaSchema = Joi.object({
             "any.required": "El ID de exhibición es requerido"
         })
 });
+
+export const updateDuracionSchema = Joi.object({
+    duracion_segundos: Joi.number()
+        .integer()
+        .min(0)
+        .required()
+        .messages({
+            "number.base": "La duración debe ser un número",
+            "number.integer": "La duración debe ser un número entero",
+            "number.min": "La duración no puede ser negativa",
+            "any.required": "La duración es requerida"
+        })
+});

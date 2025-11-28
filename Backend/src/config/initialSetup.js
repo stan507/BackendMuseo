@@ -5,6 +5,7 @@ import { Usuario } from "../entity/Usuario.entity.js";
 import { Quizz } from "../entity/Quizz.entity.js";
 import { Pregunta } from "../entity/Pregunta.entity.js";
 import { Respuesta } from "../entity/Respuesta.entity.js";
+import bcrypt from "bcryptjs";
 
 /**
  * Datos iniciales de las 4 exhibiciones del museo
@@ -34,13 +35,9 @@ const exhibicionesIniciales = [
 
 /**
  * Usuario admin predefinido (sin ID, lo genera la BD)
+ * La contraseña se encriptará antes de insertarse
  */
-const adminUsuario = {
-    nombre: "Admin",
-    apellido: "Sistema",
-    correo: "admin@museo.cl",
-    rol: "admin"
-};
+const adminPassword = "admin123"; // Contraseña en texto plano (se encriptará)
 
 /**
  * Función que verifica si la tabla está vacía y, de ser así, inserta los datos iniciales
@@ -69,6 +66,19 @@ export async function seedDatabase() {
         let admin;
         if (usuarioCount === 0) {
             console.log("Insertando usuario admin...");
+            
+            // Encriptar contraseña
+            const salt = await bcrypt.genSalt(10);
+            const contrasenaHash = await bcrypt.hash(adminPassword, salt);
+            
+            const adminUsuario = {
+                nombre: "Admin",
+                apellido: "Sistema",
+                correo: "admin@museo.cl",
+                contrasena: contrasenaHash,
+                rol: "admin"
+            };
+            
             admin = await usuarioRepo.save(adminUsuario);
             console.log(`  Usuario admin creado: ${admin.correo} (ID: ${admin.id_usuario})`);
         } else {

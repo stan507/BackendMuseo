@@ -17,15 +17,15 @@ export async function loginService(correo, password) {
             return [null, "Credenciales inválidas"];
         }
         
-        // Verificar password (si existe en BD)
-        if (usuario.password) {
-            const passwordValido = await bcryptjs.compare(password, usuario.password);
+        // Verificar contraseña (si existe en BD)
+        if (usuario.contrasena) {
+            const passwordValido = await bcryptjs.compare(password, usuario.contrasena);
             
             if (!passwordValido) {
                 return [null, "Credenciales inválidas"];
             }
         } else {
-            // Si no tiene password guardado, comparar directo (temporal)
+            // Si no tiene contraseña guardada, comparar directo (temporal)
             if (password !== "admin123") {
                 return [null, "Credenciales inválidas"];
             }
