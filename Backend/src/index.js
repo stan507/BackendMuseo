@@ -31,9 +31,9 @@ async function startServer() {
         await seedDatabase();
 
         // 3. Si todo fue exitoso, iniciar el servidor web
-        const server = app.listen(port, () => {
-            console.log(`Backend del Museo escuchando en http://localhost:${port}`);
-            console.log("Rutas de API disponibles en: http://localhost:3000/api/museo");
+        const server = app.listen(port, '0.0.0.0', () => {
+            console.log(`Backend del Museo escuchando en http://0.0.0.0:${port}`);
+            console.log("Rutas de API disponibles en: http://0.0.0.0:${port}/api");
         });
 
         // Mantener el proceso vivo

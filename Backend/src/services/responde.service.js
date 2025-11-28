@@ -2,13 +2,14 @@
 import { AppDataSource } from "../config/configDb.js";
 import { Responde } from "../entity/Responde.entity.js";
 
-export async function createRespondeService(id_usuario, id_quizz) {
+export async function createRespondeService(id_usuario, id_quizz, correctas) {
     try {
         const respondeRepo = AppDataSource.getRepository(Responde);
 
         const nuevoResponde = {
             id_usuario: id_usuario,
-            id_quizz: id_quizz
+            id_quizz: id_quizz,
+            correctas: correctas
             // fecha_responde se genera automáticamente con CURRENT_TIMESTAMP
         };
 

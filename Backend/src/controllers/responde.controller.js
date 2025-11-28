@@ -3,9 +3,9 @@ import { createRespondeService } from "../services/responde.service.js";
 
 export async function createResponde(req, res) {
     try {
-        const { id_usuario, id_quizz } = req.body;
+        const { id_usuario, id_quizz, correctas } = req.body;
 
-        const [responde, error] = await createRespondeService(id_usuario, id_quizz);
+        const [responde, error] = await createRespondeService(id_usuario, id_quizz, correctas);
 
         if (error) {
             return res.status(500).json({
@@ -20,6 +20,7 @@ export async function createResponde(req, res) {
                 id_responder: responde.id_responder,
                 id_usuario: responde.id_usuario,
                 id_quizz: responde.id_quizz,
+                correctas: responde.correctas,
                 fecha_responde: responde.fecha_responde
             }
         });

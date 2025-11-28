@@ -18,6 +18,11 @@ export const Responde = new EntitySchema({
             type: "int",
             nullable: false,
         },
+        correctas: {
+            type: "int",
+            nullable: false,
+            default: 0,
+        },
         fecha_responde: {
             type: "timestamp",
             nullable: false,
