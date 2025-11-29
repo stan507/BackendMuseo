@@ -5,6 +5,8 @@ import { Usuario } from "../entity/Usuario.entity.js";
 import { Quizz } from "../entity/Quizz.entity.js";
 import { Pregunta } from "../entity/Pregunta.entity.js";
 import { Respuesta } from "../entity/Respuesta.entity.js";
+import { Visita } from "../entity/Visita.entity.js";
+import { Responde } from "../entity/Responde.entity.js";
 import bcrypt from "bcryptjs";
 
 /**
@@ -223,7 +225,45 @@ export async function seedDatabase() {
                 ]);
 
                 console.log("  Se insertaron 4 quizzes con sus preguntas y respuestas.");
+            } else {
+                console.log(`  Ya existen ${quizzCount} quiz(zes).`);
             }
+
+        // 4. VISITAS DE EJEMPLO (admin visita cada exhibición)
+        const visitaRepo = AppDataSource.getRepository("Visita");
+        const visitaCount = await visitaRepo.count();
+        if (visitaCount === 0 && admin) {
+            console.log("Insertando visitas de ejemplo...");
+            
+            await visitaRepo.save([
+                { id_usuario: admin.id_usuario, id_exhibicion: "huemul", duracion_segundos: 180 },
+                { id_usuario: admin.id_usuario, id_exhibicion: "helice", duracion_segundos: 240 },
+                { id_usuario: admin.id_usuario, id_exhibicion: "chemomul", duracion_segundos: 300 },
+                { id_usuario: admin.id_usuario, id_exhibicion: "cocodrilo", duracion_segundos: 150 }
+            ]);
+            
+            console.log("  Se insertaron 4 visitas de ejemplo.");
+        } else {
+            console.log(`  Ya existen ${visitaCount} visita(s).`);
+        }
+
+        // 5. RESPUESTAS DE EJEMPLO (admin responde cada quiz)
+        const respondeRepo = AppDataSource.getRepository("Responde");
+        const respondeCount = await respondeRepo.count();
+        if (respondeCount === 0 && quizzCount > 0 && admin) {
+            console.log("Insertando respuestas de ejemplo...");
+            
+            await respondeRepo.save([
+                { id_usuario: admin.id_usuario, id_quizz: 1, correctas: 3, tiempo_segundos: 45 },
+                { id_usuario: admin.id_usuario, id_quizz: 2, correctas: 2, tiempo_segundos: 35 },
+                { id_usuario: admin.id_usuario, id_quizz: 3, correctas: 2, tiempo_segundos: 50 },
+                { id_usuario: admin.id_usuario, id_quizz: 4, correctas: 2, tiempo_segundos: 30 }
+            ]);
+            
+            console.log("  Se insertaron 4 respuestas de ejemplo.");
+        } else {
+            console.log(`  Ya existen ${respondeCount} respuesta(s).`);
+        }
 
         console.log("Inicializacion completada.");
     } catch (error) {

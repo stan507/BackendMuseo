@@ -7,6 +7,7 @@ import {
     updateInforme,
     deleteInforme
 } from "../controllers/informe.controller.js";
+import { generarInformePDF } from "../controllers/pdf.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
@@ -16,6 +17,9 @@ import {
 } from "../validations/informe.validation.js";
 
 const router = Router();
+
+// GET PDF de estadísticas (ANTES de /:id)
+router.get("/pdf", authenticate, generarInformePDF);
 
 // GET all informes
 router.get("/", authenticate, getAllInformes);
