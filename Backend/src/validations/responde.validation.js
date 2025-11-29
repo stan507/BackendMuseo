@@ -39,3 +39,13 @@ export const createRespondeSchema = Joi.object({
             "number.min": "El tiempo no puede ser negativo"
         })
 });
+
+export const getRespondesByQuizzSchema = Joi.object({
+    id_quizz: Joi.number().integer().positive().required()
+        .messages({
+            "number.base": "El id_quizz debe ser un número",
+            "number.integer": "El id_quizz debe ser un número entero",
+            "number.positive": "El id_quizz debe ser positivo",
+            "any.required": "El id_quizz es requerido"
+        })
+});

@@ -2,6 +2,7 @@
 import {
     getQuizzByIdService,
     getAllQuizzesService,
+    getQuizzByExhibicionService,
     createQuizzService,
     updateQuizzService,
     deleteQuizzService
@@ -56,12 +57,36 @@ export async function getQuizzById(req, res) {
     }
 }
 
+// Obtener quiz por exhibición
+export async function getQuizzByExhibicion(req, res) {
+    try {
+        const { id_exhibicion } = req.params;
+
+        const [quizz, error] = await getQuizzByExhibicionService(id_exhibicion);
+
+        if (error) {
+            return res.status(404).json({
+                message: error,
+                data: null
+            });
+        }
+
+        res.status(200).json(quizz);
+    } catch (error) {
+        console.error("Error en getQuizzByExhibicion:", error);
+        res.status(500).json({
+            message: "Error interno del servidor",
+            data: null
+        });
+    }
+}
+
 // Crear quiz completo (nested)
 export async function createQuizz(req, res) {
     try {
-        const { id_usuario, titulo, preguntas } = req.body;
+        const { id_usuario, id_exhibicion, titulo, preguntas } = req.body;
 
-        const [quizz, error] = await createQuizzService(id_usuario, titulo, preguntas);
+        const [quizz, error] = await createQuizzService(id_usuario, id_exhibicion, titulo, preguntas);
 
         if (error) {
             return res.status(500).json({
@@ -87,9 +112,9 @@ export async function createQuizz(req, res) {
 export async function updateQuizz(req, res) {
     try {
         const { id } = req.params;
-        const { titulo, preguntas } = req.body;
+        const { id_exhibicion, titulo, preguntas } = req.body;
 
-        const [quizz, error] = await updateQuizzService(parseInt(id), titulo, preguntas);
+        const [quizz, error] = await updateQuizzService(parseInt(id), id_exhibicion, titulo, preguntas);
 
         if (error) {
             const statusCode = error === "Quiz no encontrado" ? 404 : 500;

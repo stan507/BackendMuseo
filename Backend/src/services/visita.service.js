@@ -41,3 +41,65 @@ export async function updateDuracionVisitaService(id_visita, duracion_segundos) 
         return [null, "Error interno del servidor"];
     }
 }
+
+/**
+ * Obtener todas las visitas
+ */
+export async function getAllVisitasService() {
+    try {
+        const visitaRepo = AppDataSource.getRepository(Visita);
+        
+        const visitas = await visitaRepo.find({
+            relations: ["usuario", "exhibicion"],
+            order: { fecha_visita: "DESC" }
+        });
+
+        return [visitas, null];
+    } catch (error) {
+        console.error("Error en getAllVisitasService:", error);
+        return [null, "Error interno del servidor"];
+    }
+}
+
+/**
+ * Obtener una visita por ID
+ */
+export async function getVisitaByIdService(id_visita) {
+    try {
+        const visitaRepo = AppDataSource.getRepository(Visita);
+        
+        const visita = await visitaRepo.findOne({
+            where: { id_visita },
+            relations: ["usuario", "exhibicion"]
+        });
+
+        if (!visita) {
+            return [null, "Visita no encontrada"];
+        }
+
+        return [visita, null];
+    } catch (error) {
+        console.error("Error en getVisitaByIdService:", error);
+        return [null, "Error interno del servidor"];
+    }
+}
+
+/**
+ * Obtener todas las visitas de una exhibición
+ */
+export async function getVisitasByExhibicionService(id_exhibicion) {
+    try {
+        const visitaRepo = AppDataSource.getRepository(Visita);
+        
+        const visitas = await visitaRepo.find({
+            where: { id_exhibicion },
+            relations: ["usuario", "exhibicion"],
+            order: { fecha_visita: "DESC" }
+        });
+
+        return [visitas, null];
+    } catch (error) {
+        console.error("Error en getVisitasByExhibicionService:", error);
+        return [null, "Error interno del servidor"];
+    }
+}

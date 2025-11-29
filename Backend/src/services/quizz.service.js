@@ -74,8 +74,65 @@ export async function getAllQuizzesService() {
     }
 }
 
+// Obtener quiz por exhibición
+export async function getQuizzByExhibicionService(id_exhibicion) {
+    try {
+        const quizzRepo = AppDataSource.getRepository(Quizz);
+        const preguntaRepo = AppDataSource.getRepository(Pregunta);
+        const respuestaRepo = AppDataSource.getRepository(Respuesta);
+
+        // Buscar quiz por exhibición
+        const quizz = await quizzRepo.findOne({
+            where: { id_exhibicion }
+        });
+
+        if (!quizz) {
+            return [null, "No hay quiz para esta exhibición"];
+        }
+
+        // Obtener preguntas y respuestas
+        const preguntas = await preguntaRepo.find({
+            where: { id_quizz: quizz.id_quizz }
+        });
+
+        const preguntasConRespuestas = await Promise.all(
+            preguntas.map(async (pregunta) => {
+                const respuestas = await respuestaRepo.find({
+                    where: { id_pregunta: pregunta.id_pregunta }
+                });
+
+                return {
+                    id_pregunta: pregunta.id_pregunta,
+                    titulo: pregunta.titulo,
+                    texto: pregunta.texto,
+                    respuestas: respuestas.map(r => ({
+                        id_respuesta: r.id_respuesta,
+                        texto: r.texto,
+                        es_correcta: r.es_correcta
+                    }))
+                };
+            })
+        );
+
+        const quizzCompleto = {
+            id_quizz: quizz.id_quizz,
+            id_usuario: quizz.id_usuario,
+            id_exhibicion: quizz.id_exhibicion,
+            titulo: quizz.titulo,
+            cant_preguntas: quizz.cant_preguntas,
+            fecha_creacion: quizz.fecha_creacion,
+            preguntas: preguntasConRespuestas
+        };
+
+        return [quizzCompleto, null];
+    } catch (error) {
+        console.error("Error en getQuizzByExhibicionService:", error);
+        return [null, "Error interno del servidor"];
+    }
+}
+
 // Crear quiz completo (nested: quiz + preguntas + respuestas)
-export async function createQuizzService(id_usuario, titulo, preguntas) {
+export async function createQuizzService(id_usuario, id_exhibicion, titulo, preguntas) {
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -88,6 +145,7 @@ export async function createQuizzService(id_usuario, titulo, preguntas) {
         // 1. Crear el quiz
         const nuevoQuizz = await quizzRepo.save({
             id_usuario,
+            id_exhibicion,
             titulo,
             cant_preguntas: preguntas.length
         });
@@ -124,7 +182,7 @@ export async function createQuizzService(id_usuario, titulo, preguntas) {
 }
 
 // Actualizar quiz completo (elimina preguntas/respuestas antiguas y crea nuevas)
-export async function updateQuizzService(id_quizz, titulo, preguntas) {
+export async function updateQuizzService(id_quizz, id_exhibicion, titulo, preguntas) {
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -146,6 +204,7 @@ export async function updateQuizzService(id_quizz, titulo, preguntas) {
         
         // 3. Actualizar quiz
         await quizzRepo.update({ id_quizz }, {
+            id_exhibicion,
             titulo,
             cant_preguntas: preguntas.length
         });

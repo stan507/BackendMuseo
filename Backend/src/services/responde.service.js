@@ -22,3 +22,42 @@ export async function createRespondeService(id_usuario, id_quizz, correctas, tie
         return [null, "Error interno del servidor"];
     }
 }
+
+/**
+ * Obtener todas las respuestas
+ */
+export async function getAllRespondesService() {
+    try {
+        const respondeRepo = AppDataSource.getRepository(Responde);
+        
+        const respuestas = await respondeRepo.find({
+            relations: ["usuario", "quizz"],
+            order: { fecha_responde: "DESC" }
+        });
+
+        return [respuestas, null];
+    } catch (error) {
+        console.error("Error en getAllRespondesService:", error);
+        return [null, "Error interno del servidor"];
+    }
+}
+
+/**
+ * Obtener todas las respuestas de un quiz específico
+ */
+export async function getRespondesByQuizzService(id_quizz) {
+    try {
+        const respondeRepo = AppDataSource.getRepository(Responde);
+        
+        const respuestas = await respondeRepo.find({
+            where: { id_quizz },
+            relations: ["usuario", "quizz"],
+            order: { fecha_responde: "DESC" }
+        });
+
+        return [respuestas, null];
+    } catch (error) {
+        console.error("Error en getRespondesByQuizzService:", error);
+        return [null, "Error interno del servidor"];
+    }
+}

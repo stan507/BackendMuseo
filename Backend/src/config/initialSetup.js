@@ -94,6 +94,7 @@ export async function seedDatabase() {
                 // Quiz 1: Huemul
                 const quizHuemul = await quizzRepo.save({
                     id_usuario: admin.id_usuario,
+                    id_exhibicion: "huemul",
                     titulo: "Quiz sobre el Huemul",
                     cant_preguntas: 3
                 });
@@ -134,6 +135,7 @@ export async function seedDatabase() {
                 // Quiz 2: Helice
                 const quizHelice = await quizzRepo.save({
                     id_usuario: admin.id_usuario,
+                    id_exhibicion: "helice",
                     titulo: "Quiz sobre la Helice de Avion",
                     cant_preguntas: 2
                 });
@@ -163,6 +165,7 @@ export async function seedDatabase() {
                 // Quiz 3: Chemamull
                 const quizChemamull = await quizzRepo.save({
                     id_usuario: admin.id_usuario,
+                    id_exhibicion: "chemomul",
                     titulo: "Quiz sobre el Chemamull",
                     cant_preguntas: 2
                 });
@@ -192,6 +195,7 @@ export async function seedDatabase() {
                 // Quiz 4: Cocodrilo
                 const quizCocodrilo = await quizzRepo.save({
                     id_usuario: admin.id_usuario,
+                    id_exhibicion: "cocodrilo",
                     titulo: "Quiz sobre el Cocodrilo",
                     cant_preguntas: 2
                 });

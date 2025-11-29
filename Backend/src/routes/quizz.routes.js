@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
     getAllQuizzes,
     getQuizzById,
+    getQuizzByExhibicion,
     createQuizz,
     updateQuizz,
     deleteQuizz
@@ -15,6 +16,9 @@ const router = Router();
 
 // Obtener todos los quizzes
 router.get("/", authenticate, getAllQuizzes);
+
+// Obtener quiz por exhibición (DEBE IR ANTES de /:id)
+router.get("/exhibicion/:id_exhibicion", authenticate, getQuizzByExhibicion);
 
 // Obtener quiz por ID
 router.get("/:id", authenticate, validate(getQuizzSchema, "params"), getQuizzById);

@@ -1,5 +1,9 @@
 "use strict";
-import { createRespondeService } from "../services/responde.service.js";
+import {
+    createRespondeService,
+    getAllRespondesService,
+    getRespondesByQuizzService
+} from "../services/responde.service.js";
 
 export async function createResponde(req, res) {
     try {
@@ -31,5 +35,43 @@ export async function createResponde(req, res) {
             message: "Error interno del servidor",
             data: null
         });
+    }
+}
+
+/**
+ * GET /api/responde - Obtener todas las respuestas
+ */
+export async function getAllRespondes(req, res) {
+    try {
+        const [respuestas, error] = await getAllRespondesService();
+
+        if (error) {
+            return res.status(500).json({ message: error });
+        }
+
+        res.status(200).json(respuestas);
+    } catch (error) {
+        console.error("Error en getAllRespondes:", error);
+        res.status(500).json({ message: "Error interno del servidor" });
+    }
+}
+
+/**
+ * GET /api/responde/quizz/:id_quizz - Obtener respuestas por quiz
+ */
+export async function getRespondesByQuizz(req, res) {
+    try {
+        const { id_quizz } = req.params;
+
+        const [respuestas, error] = await getRespondesByQuizzService(parseInt(id_quizz));
+
+        if (error) {
+            return res.status(500).json({ message: error });
+        }
+
+        res.status(200).json(respuestas);
+    } catch (error) {
+        console.error("Error en getRespondesByQuizz:", error);
+        res.status(500).json({ message: "Error interno del servidor" });
     }
 }

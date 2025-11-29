@@ -30,3 +30,22 @@ export const updateDuracionSchema = Joi.object({
             "any.required": "La duración es requerida"
         })
 });
+
+export const getVisitaSchema = Joi.object({
+    id: Joi.number().integer().positive().required()
+        .messages({
+            "number.base": "El ID debe ser un número",
+            "number.integer": "El ID debe ser un número entero",
+            "number.positive": "El ID debe ser positivo",
+            "any.required": "El ID es requerido"
+        })
+});
+
+export const getVisitasByExhibicionSchema = Joi.object({
+    id_exhibicion: Joi.string().valid("huemul", "helice", "chemomul", "cocodrilo").required()
+        .messages({
+            "string.base": "El id_exhibicion debe ser una cadena de texto",
+            "any.only": "El id_exhibicion debe ser: huemul, helice, chemomul o cocodrilo",
+            "any.required": "El id_exhibicion es requerido"
+        })
+});

@@ -58,12 +58,20 @@ const preguntaSchema = Joi.object({
         }),
     respuestas: Joi.array()
         .items(respuestaSchema)
-        .min(2)
+        .length(4)
         .required()
+        .custom((value, helpers) => {
+            const correctas = value.filter(r => r.es_correcta === true);
+            if (correctas.length !== 1) {
+                return helpers.error('respuestas.correctas');
+            }
+            return value;
+        })
         .messages({
             "array.base": "respuestas debe ser un array",
-            "array.min": "Debe haber al menos 2 respuestas por pregunta",
-            "any.required": "Las respuestas son requeridas"
+            "array.length": "Debe haber exactamente 4 respuestas por pregunta",
+            "any.required": "Las respuestas son requeridas",
+            "respuestas.correctas": "Debe haber exactamente 1 respuesta correcta"
         })
 });
 
@@ -76,6 +84,14 @@ export const createQuizzSchema = Joi.object({
             "string.base": "id_usuario debe ser texto",
             "string.guid": "id_usuario debe ser un UUID válido",
             "any.required": "id_usuario es requerido"
+        }),
+    id_exhibicion: Joi.string()
+        .valid("huemul", "helice", "chemomul", "cocodrilo")
+        .required()
+        .messages({
+            "string.base": "id_exhibicion debe ser texto",
+            "any.only": "id_exhibicion debe ser: huemul, helice, chemomul o cocodrilo",
+            "any.required": "id_exhibicion es requerido"
         }),
     titulo: Joi.string()
         .min(5)
@@ -104,6 +120,14 @@ export const createQuizzSchema = Joi.object({
 
 // Validación para actualizar quiz (sin id_usuario)
 export const updateQuizzSchema = Joi.object({
+    id_exhibicion: Joi.string()
+        .valid("huemul", "helice", "chemomul", "cocodrilo")
+        .required()
+        .messages({
+            "string.base": "id_exhibicion debe ser texto",
+            "any.only": "id_exhibicion debe ser: huemul, helice, chemomul o cocodrilo",
+            "any.required": "id_exhibicion es requerido"
+        }),
     titulo: Joi.string()
         .min(5)
         .max(200)

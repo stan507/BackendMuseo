@@ -1,5 +1,11 @@
 "use strict";
-import { createVisitaService, updateDuracionVisitaService } from "../services/visita.service.js";
+import {
+    createVisitaService,
+    updateDuracionVisitaService,
+    getAllVisitasService,
+    getVisitaByIdService,
+    getVisitasByExhibicionService
+} from "../services/visita.service.js";
 
 export async function createVisita(req, res) {
     try {
@@ -61,5 +67,63 @@ export async function updateDuracionVisita(req, res) {
             message: "Error interno del servidor",
             data: null
         });
+    }
+}
+
+/**
+ * GET /api/visita - Obtener todas las visitas
+ */
+export async function getAllVisitas(req, res) {
+    try {
+        const [visitas, error] = await getAllVisitasService();
+
+        if (error) {
+            return res.status(500).json({ message: error });
+        }
+
+        res.status(200).json(visitas);
+    } catch (error) {
+        console.error("Error en getAllVisitas:", error);
+        res.status(500).json({ message: "Error interno del servidor" });
+    }
+}
+
+/**
+ * GET /api/visita/:id - Obtener una visita por ID
+ */
+export async function getVisitaById(req, res) {
+    try {
+        const { id } = req.params;
+
+        const [visita, error] = await getVisitaByIdService(parseInt(id));
+
+        if (error) {
+            return res.status(404).json({ message: error });
+        }
+
+        res.status(200).json(visita);
+    } catch (error) {
+        console.error("Error en getVisitaById:", error);
+        res.status(500).json({ message: "Error interno del servidor" });
+    }
+}
+
+/**
+ * GET /api/visita/exhibicion/:id_exhibicion - Obtener visitas por exhibición
+ */
+export async function getVisitasByExhibicion(req, res) {
+    try {
+        const { id_exhibicion } = req.params;
+
+        const [visitas, error] = await getVisitasByExhibicionService(id_exhibicion);
+
+        if (error) {
+            return res.status(500).json({ message: error });
+        }
+
+        res.status(200).json(visitas);
+    } catch (error) {
+        console.error("Error en getVisitasByExhibicion:", error);
+        res.status(500).json({ message: "Error interno del servidor" });
     }
 }
