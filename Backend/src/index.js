@@ -10,7 +10,10 @@ const port = PORT || 3000; // Usa el puerto del .env o el 3000
 
 // --- Middlewares ---
 // (Son plugins que se ejecutan en cada petición)
-app.use(cors()); // Permite peticiones desde Unity (diferente "origen")
+app.use(cors({
+    origin: ['http://localhost:5173', 'http://localhost:3001', 'http://146.83.194.142:1832'], // Vite (5173), frontend alternativo (3001), producción
+    credentials: true
+})); // Permite peticiones desde frontend
 app.use(express.json()); // Permite a Express entender JSON
 
 // --- Rutas ---

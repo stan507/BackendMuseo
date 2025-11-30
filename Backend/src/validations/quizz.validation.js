@@ -18,12 +18,12 @@ export const getQuizzSchema = Joi.object({
 const respuestaSchema = Joi.object({
     texto: Joi.string()
         .min(1)
-        .max(500)
+        .max(200)
         .required()
         .messages({
             "string.base": "El texto de la respuesta debe ser texto",
             "string.min": "El texto debe tener al menos 1 carácter",
-            "string.max": "El texto no debe exceder 500 caracteres",
+            "string.max": "El texto no debe exceder 200 caracteres",
             "any.required": "El texto de la respuesta es requerido"
         }),
     es_correcta: Joi.boolean()
@@ -37,28 +37,29 @@ const respuestaSchema = Joi.object({
 // Validación para preguntas (nested con respuestas)
 const preguntaSchema = Joi.object({
     titulo: Joi.string()
-        .min(3)
+        .min(1)
         .max(200)
         .required()
         .messages({
             "string.base": "El título debe ser texto",
-            "string.min": "El título debe tener al menos 3 caracteres",
+            "string.min": "El título debe tener al menos 1 carácter",
             "string.max": "El título no debe exceder 200 caracteres",
             "any.required": "El título es requerido"
         }),
     texto: Joi.string()
-        .min(5)
+        .min(1)
         .max(1000)
         .required()
         .messages({
             "string.base": "El texto debe ser texto",
-            "string.min": "El texto debe tener al menos 5 caracteres",
+            "string.min": "El texto debe tener al menos 1 carácter",
             "string.max": "El texto no debe exceder 1000 caracteres",
             "any.required": "El texto de la pregunta es requerido"
         }),
     respuestas: Joi.array()
         .items(respuestaSchema)
-        .length(4)
+        .min(2)
+        .max(4)
         .required()
         .custom((value, helpers) => {
             const correctas = value.filter(r => r.es_correcta === true);
@@ -69,7 +70,8 @@ const preguntaSchema = Joi.object({
         })
         .messages({
             "array.base": "respuestas debe ser un array",
-            "array.length": "Debe haber exactamente 4 respuestas por pregunta",
+            "array.min": "Debe haber al menos 2 respuestas por pregunta",
+            "array.max": "Debe haber máximo 4 respuestas por pregunta",
             "any.required": "Las respuestas son requeridas",
             "respuestas.correctas": "Debe haber exactamente 1 respuesta correcta"
         })
@@ -94,12 +96,12 @@ export const createQuizzSchema = Joi.object({
             "any.required": "id_exhibicion es requerido"
         }),
     titulo: Joi.string()
-        .min(5)
+        .min(1)
         .max(200)
         .required()
         .messages({
             "string.base": "El título debe ser texto",
-            "string.min": "El título debe tener al menos 5 caracteres",
+            "string.min": "El título debe tener al menos 1 carácter",
             "string.max": "El título no debe exceder 200 caracteres",
             "any.required": "El título es requerido"
         }),
@@ -129,12 +131,12 @@ export const updateQuizzSchema = Joi.object({
             "any.required": "id_exhibicion es requerido"
         }),
     titulo: Joi.string()
-        .min(5)
+        .min(1)
         .max(200)
         .required()
         .messages({
             "string.base": "El título debe ser texto",
-            "string.min": "El título debe tener al menos 5 caracteres",
+            "string.min": "El título debe tener al menos 1 caracter",
             "string.max": "El título no debe exceder 200 caracteres",
             "any.required": "El título es requerido"
         }),

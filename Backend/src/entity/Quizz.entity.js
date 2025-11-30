@@ -28,6 +28,11 @@ export const Quizz = new EntitySchema({
             type: "int",
             nullable: false,
         },
+        es_activo: {
+            type: "boolean",
+            nullable: false,
+            default: false,
+        },
         fecha_creacion: {
             type: "timestamp",
             nullable: false,

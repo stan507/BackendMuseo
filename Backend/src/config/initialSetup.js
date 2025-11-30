@@ -98,7 +98,8 @@ export async function seedDatabase() {
                     id_usuario: admin.id_usuario,
                     id_exhibicion: "huemul",
                     titulo: "Quiz sobre el Huemul",
-                    cant_preguntas: 3
+                    cant_preguntas: 2,
+                    es_activo: true
                 });
 
                 const p1 = await preguntaRepo.save({
@@ -138,8 +139,9 @@ export async function seedDatabase() {
                 const quizHelice = await quizzRepo.save({
                     id_usuario: admin.id_usuario,
                     id_exhibicion: "helice",
-                    titulo: "Quiz sobre la Helice de Avion",
-                    cant_preguntas: 2
+                    titulo: "Quiz sobre la helice",
+                    cant_preguntas: 3,
+                    es_activo: true
                 });
 
                 const p4 = await preguntaRepo.save({
@@ -169,7 +171,8 @@ export async function seedDatabase() {
                     id_usuario: admin.id_usuario,
                     id_exhibicion: "chemomul",
                     titulo: "Quiz sobre el Chemamull",
-                    cant_preguntas: 2
+                    cant_preguntas: 2,
+                    es_activo: true
                 });
 
                 const p6 = await preguntaRepo.save({
@@ -198,8 +201,9 @@ export async function seedDatabase() {
                 const quizCocodrilo = await quizzRepo.save({
                     id_usuario: admin.id_usuario,
                     id_exhibicion: "cocodrilo",
-                    titulo: "Quiz sobre el Cocodrilo",
-                    cant_preguntas: 2
+                    titulo: "Quiz del Cocodrilo",
+                    cant_preguntas: 2,
+                    es_activo: true
                 });
 
                 const p8 = await preguntaRepo.save({
@@ -229,6 +233,9 @@ export async function seedDatabase() {
                 console.log(`  Ya existen ${quizzCount} quiz(zes).`);
             }
 
+        // Recalcular quizzCount después de insertar
+        const quizzCountActual = await quizzRepo.count();
+
         // 4. VISITAS DE EJEMPLO (admin visita cada exhibición)
         const visitaRepo = AppDataSource.getRepository("Visita");
         const visitaCount = await visitaRepo.count();
@@ -250,7 +257,7 @@ export async function seedDatabase() {
         // 5. RESPUESTAS DE EJEMPLO (admin responde cada quiz)
         const respondeRepo = AppDataSource.getRepository("Responde");
         const respondeCount = await respondeRepo.count();
-        if (respondeCount === 0 && quizzCount > 0 && admin) {
+        if (respondeCount === 0 && quizzCountActual > 0 && admin) {
             console.log("Insertando respuestas de ejemplo...");
             
             await respondeRepo.save([
@@ -263,6 +270,17 @@ export async function seedDatabase() {
             console.log("  Se insertaron 4 respuestas de ejemplo.");
         } else {
             console.log(`  Ya existen ${respondeCount} respuesta(s).`);
+        }
+
+        // 6. MIGRACION: Agregar columna quiz_iniciado si no existe
+        try {
+            await AppDataSource.query(`
+                ALTER TABLE visita 
+                ADD COLUMN IF NOT EXISTS quiz_iniciado BOOLEAN DEFAULT NULL
+            `);
+            console.log("  Columna 'quiz_iniciado' verificada/creada en tabla visita.");
+        } catch (error) {
+            console.log("  Columna 'quiz_iniciado' ya existe o error:", error.message);
         }
 
         console.log("Inicializacion completada.");

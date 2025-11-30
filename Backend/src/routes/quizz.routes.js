@@ -6,7 +6,8 @@ import {
     getQuizzByExhibicion,
     createQuizz,
     updateQuizz,
-    deleteQuizz
+    deleteQuizz,
+    activarQuizz
 } from "../controllers/quizz.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { getQuizzSchema, createQuizzSchema, updateQuizzSchema } from "../validations/quizz.validation.js";
@@ -31,5 +32,8 @@ router.put("/:id", authenticate, validate(getQuizzSchema, "params"), validate(up
 
 // Eliminar quiz
 router.delete("/:id", authenticate, validate(getQuizzSchema, "params"), deleteQuizz);
+
+// Activar quiz (DEBE IR ANTES de /:id para no confundir "activar" con un ID)
+router.patch("/:id/activar", authenticate, validate(getQuizzSchema, "params"), activarQuizz);
 
 export default router;

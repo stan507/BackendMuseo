@@ -50,6 +50,7 @@ export async function getQuizzByIdService(id) {
             id_usuario: quizz.id_usuario,
             titulo: quizz.titulo,
             cant_preguntas: quizz.cant_preguntas,
+            es_activo: quizz.es_activo,
             fecha_creacion: quizz.fecha_creacion,
             preguntas: preguntasConRespuestas
         };
@@ -65,7 +66,9 @@ export async function getQuizzByIdService(id) {
 export async function getAllQuizzesService() {
     try {
         const quizzRepo = AppDataSource.getRepository(Quizz);
-        const quizzes = await quizzRepo.find();
+        const quizzes = await quizzRepo.find({
+            relations: ['exhibicion']
+        });
         
         return [quizzes, null];
     } catch (error) {
@@ -81,9 +84,74 @@ export async function getQuizzByExhibicionService(id_exhibicion) {
         const preguntaRepo = AppDataSource.getRepository(Pregunta);
         const respuestaRepo = AppDataSource.getRepository(Respuesta);
 
-        // Buscar quiz por exhibición
+        // Buscar TODOS los quizzes de la exhibición
+        const quizzes = await quizzRepo.find({
+            where: { id_exhibicion },
+            order: { fecha_creacion: 'DESC' }
+        });
+
+        if (!quizzes || quizzes.length === 0) {
+            return [[], null]; // Retornar array vacío en lugar de error
+        }
+
+        // Procesar todos los quizzes
+        const quizzesCompletos = await Promise.all(
+            quizzes.map(async (quizz) => {
+                // Obtener preguntas del quiz
+                const preguntas = await preguntaRepo.find({
+                    where: { id_quizz: quizz.id_quizz }
+                });
+
+                const preguntasConRespuestas = await Promise.all(
+                    preguntas.map(async (pregunta) => {
+                        const respuestas = await respuestaRepo.find({
+                            where: { id_pregunta: pregunta.id_pregunta }
+                        });
+
+                        return {
+                            id_pregunta: pregunta.id_pregunta,
+                            titulo: pregunta.titulo,
+                            texto: pregunta.texto,
+                            respuestas: respuestas.map(r => ({
+                                id_respuesta: r.id_respuesta,
+                                texto: r.texto,
+                                es_correcta: r.es_correcta
+                            }))
+                        };
+                    })
+                );
+
+                return {
+                    id_quizz: quizz.id_quizz,
+                    id_usuario: quizz.id_usuario,
+                    id_exhibicion: quizz.id_exhibicion,
+                    titulo: quizz.titulo,
+                    cant_preguntas: quizz.cant_preguntas,
+                    es_activo: quizz.es_activo,
+                    fecha_creacion: quizz.fecha_creacion,
+                    preguntas: preguntasConRespuestas
+                };
+            })
+        );
+
+        return [quizzesCompletos, null];
+    } catch (error) {
+        console.error("Error en getQuizzByExhibicionService:", error);
+        return [null, "Error interno del servidor"];
+    }
+}
+
+// ANTIGUO: Obtener solo el primer quiz de una exhibición (deprecated, mantener por compatibilidad)
+export async function getFirstQuizzByExhibicionService(id_exhibicion) {
+    try {
+        const quizzRepo = AppDataSource.getRepository(Quizz);
+        const preguntaRepo = AppDataSource.getRepository(Pregunta);
+        const respuestaRepo = AppDataSource.getRepository(Respuesta);
+
+        // Buscar primer quiz por exhibición
         const quizz = await quizzRepo.findOne({
-            where: { id_exhibicion }
+            where: { id_exhibicion },
+            order: { fecha_creacion: 'DESC' }
         });
 
         if (!quizz) {
@@ -120,13 +188,14 @@ export async function getQuizzByExhibicionService(id_exhibicion) {
             id_exhibicion: quizz.id_exhibicion,
             titulo: quizz.titulo,
             cant_preguntas: quizz.cant_preguntas,
+            es_activo: quizz.es_activo,
             fecha_creacion: quizz.fecha_creacion,
             preguntas: preguntasConRespuestas
         };
 
         return [quizzCompleto, null];
     } catch (error) {
-        console.error("Error en getQuizzByExhibicionService:", error);
+        console.error("Error en getFirstQuizzByExhibicionService:", error);
         return [null, "Error interno del servidor"];
     }
 }
@@ -142,12 +211,19 @@ export async function createQuizzService(id_usuario, id_exhibicion, titulo, preg
         const preguntaRepo = queryRunner.manager.getRepository(Pregunta);
         const respuestaRepo = queryRunner.manager.getRepository(Respuesta);
         
-        // 1. Crear el quiz
+        // 1. Desactivar todos los quizzes de esta exhibición
+        await quizzRepo.update(
+            { id_exhibicion },
+            { es_activo: false }
+        );
+        
+        // 2. Crear el quiz nuevo como activo
         const nuevoQuizz = await quizzRepo.save({
             id_usuario,
             id_exhibicion,
             titulo,
-            cant_preguntas: preguntas.length
+            cant_preguntas: preguntas.length,
+            es_activo: true
         });
         
         // 2. Crear preguntas y respuestas
@@ -263,5 +339,35 @@ export async function deleteQuizzService(id_quizz) {
     } catch (error) {
         console.error("Error en deleteQuizzService:", error);
         return [null, "Error al eliminar el quiz"];
+    }
+}
+
+// Activar quiz (desactiva los demás de la misma exhibición)
+export async function activarQuizzService(id_quizz) {
+    try {
+        const quizzRepo = AppDataSource.getRepository(Quizz);
+        
+        // Verificar que el quiz existe
+        const quizz = await quizzRepo.findOne({ where: { id_quizz } });
+        if (!quizz) {
+            return [null, "Quiz no encontrado"];
+        }
+        
+        // Desactivar todos los quizzes de esta exhibición
+        await quizzRepo.update(
+            { id_exhibicion: quizz.id_exhibicion },
+            { es_activo: false }
+        );
+        
+        // Activar este quiz
+        await quizzRepo.update(
+            { id_quizz },
+            { es_activo: true }
+        );
+        
+        return [{ message: "Quiz activado exitosamente", id_quizz }, null];
+    } catch (error) {
+        console.error("Error en activarQuizzService:", error);
+        return [null, "Error al activar el quiz"];
     }
 }

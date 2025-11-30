@@ -5,6 +5,7 @@ import { AppDataSource } from "../config/configDb.js";
 import { Visita } from "../entity/Visita.entity.js";
 import { Responde } from "../entity/Responde.entity.js";
 import { Between, MoreThanOrEqual, LessThanOrEqual } from "typeorm";
+import { getAnalisisQuizService } from "./visita.service.js";
 
 /**
  * Calcular rango de fechas según preset o personalizado
@@ -203,15 +204,85 @@ async function generarGraficoBarras(datos, titulo) {
 }
 
 /**
+ * Obtener estadísticas modernas usando la nueva estructura de visitas
+ */
+async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
+    const desde = fechaInicio.toISOString().split('T')[0];
+    const hasta = fechaFin.toISOString().split('T')[0];
+
+    const query = `
+        SELECT 
+            v.id_visita,
+            v.fecha_visita,
+            v.duracion_segundos,
+            v.id_exhibicion,
+            e.nombre as exhibicion_nombre,
+            COALESCE(v.puntaje_quiz, 0) as puntaje_quiz,
+            COALESCE(q.cant_preguntas, 0) as preguntas_totales,
+            v.respuestas_quiz
+        FROM visita v
+        LEFT JOIN exhibicion e ON v.id_exhibicion = e.id_exhibicion
+        LEFT JOIN quizz q ON v.id_exhibicion = q.id_exhibicion AND q.es_activo = true
+        WHERE v.fecha_visita >= $1 AND v.fecha_visita <= $2
+        ORDER BY v.fecha_visita DESC
+    `;
+
+    const visitas = await AppDataSource.query(query, [desde, hasta + ' 23:59:59']);
+
+    const totalVisitas = visitas.length;
+    const visitasConQuiz = visitas.filter(v => v.puntaje_quiz !== null && v.puntaje_quiz > 0).length;
+    
+    // Visitas por exhibición
+    const visitasPorExhibicion = {};
+    visitas.forEach(v => {
+        const nombre = v.exhibicion_nombre || 'Sin Exhibición';
+        visitasPorExhibicion[nombre] = (visitasPorExhibicion[nombre] || 0) + 1;
+    });
+
+    // Distribución de puntajes
+    const distribucionPuntajes = {};
+    visitas.forEach(v => {
+        if (v.puntaje_quiz !== null && v.puntaje_quiz > 0 && v.preguntas_totales > 0) {
+            const key = `${v.puntaje_quiz}/${v.preguntas_totales}`;
+            distribucionPuntajes[key] = (distribucionPuntajes[key] || 0) + 1;
+        }
+    });
+
+    // Preguntas difíciles
+    const preguntasDificiles = {};
+    visitas.forEach(v => {
+        if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz)) {
+            v.respuestas_quiz.forEach(respuesta => {
+                if (!respuesta.es_correcta) {
+                    const key = respuesta.texto_pregunta || 'Pregunta desconocida';
+                    preguntasDificiles[key] = (preguntasDificiles[key] || 0) + 1;
+                }
+            });
+        }
+    });
+
+    return {
+        totalVisitas,
+        visitasConQuiz,
+        visitasSinQuiz: totalVisitas - visitasConQuiz,
+        visitasPorExhibicion,
+        distribucionPuntajes,
+        preguntasDificiles: Object.entries(preguntasDificiles)
+            .map(([texto, errores]) => ({ texto, errores }))
+            .sort((a, b) => b.errores - a.errores)
+            .slice(0, 10)
+    };
+}
+
+/**
  * Generar PDF del informe
  */
-export async function generarInformePDFService(desde, hasta, preset) {
+export async function generarInformePDFService(desde, hasta, preset, quizzesIds = []) {
     try {
         const { fechaInicio, fechaFin } = calcularRangoFechas(desde, hasta, preset);
 
-        // Obtener estadísticas
-        const statsVisitas = await obtenerEstadisticasVisitas(fechaInicio, fechaFin);
-        const statsQuizzes = await obtenerEstadisticasQuizzes(fechaInicio, fechaFin);
+        // Obtener estadísticas modernas
+        const stats = await obtenerEstadisticasModernas(fechaInicio, fechaFin);
 
         // Crear PDF
         const doc = new PDFDocument({ margin: 50 });
@@ -225,49 +296,168 @@ export async function generarInformePDFService(desde, hasta, preset) {
         doc.text(`Generado: ${new Date().toLocaleString()}`, { align: 'center' });
         doc.moveDown(2);
 
-        // Sección Visitas
-        doc.fontSize(16).text('ESTADISTICAS DE VISITAS', { underline: true });
+        // Resumen General
+        doc.fontSize(16).text('RESUMEN GENERAL', { underline: true });
         doc.moveDown();
         doc.fontSize(12);
-        doc.text(`Total de visitas: ${statsVisitas.totalVisitas}`);
-        doc.text(`Visitantes únicos: ${statsVisitas.visitantesUnicos}`);
-        doc.text(`Exhibición más visitada: ${statsVisitas.masVisitada.nombre} (${statsVisitas.masVisitada.cantidad} visitas)`);
-        doc.text(`Exhibición menos visitada: ${statsVisitas.menosVisitada.nombre} (${statsVisitas.menosVisitada.cantidad} visitas)`);
-        doc.moveDown();
+        doc.text(`Total de visitas: ${stats.totalVisitas}`);
+        doc.text(`Visitantes que completaron quiz: ${stats.visitasConQuiz}`);
+        doc.text(`Visitantes sin responder quiz: ${stats.visitasSinQuiz}`);
+        doc.moveDown(2);
 
         // Visitas por exhibición
-        doc.text('Visitas por exhibición:');
-        Object.entries(statsVisitas.visitasPorExhibicion).forEach(([exhibicion, cantidad]) => {
-            const promedio = statsVisitas.promediosPorExhibicion[exhibicion] || 0;
-            doc.text(`  • ${exhibicion}: ${cantidad} visitas (promedio ${promedio}s)`);
-        });
-        doc.moveDown(2);
-
-        // Gráfico de visitas
-        const graficoVisitas = await generarGraficoBarras(statsVisitas.visitasPorExhibicion, 'Visitas por Exhibición');
-        doc.image(graficoVisitas, { width: 500 });
-        doc.addPage();
-
-        // Sección Quizzes
-        doc.fontSize(16).text('ESTADISTICAS DE QUIZZES', { underline: true });
+        doc.fontSize(16).text('VISITAS POR EXHIBICION', { underline: true });
         doc.moveDown();
         doc.fontSize(12);
-        doc.text(`Total de quizzes respondidos: ${statsQuizzes.totalRespondidos}`);
-        doc.text(`Mejor desempeño: Quiz ${statsQuizzes.mejorQuizz.id} (${statsQuizzes.mejorQuizz.promedio} correctas promedio)`);
-        doc.text(`Menor desempeño: Quiz ${statsQuizzes.peorQuizz.id} (${statsQuizzes.peorQuizz.promedio} correctas promedio)`);
-        doc.moveDown();
-
-        // Resultados por quiz
-        doc.text('Promedio de respuestas correctas por quiz:');
-        Object.entries(statsQuizzes.promedioCorrectasPorQuizz).forEach(([quiz, promedio]) => {
-            const tiempo = statsQuizzes.promedioTiempoPorQuizz[quiz] || 0;
-            doc.text(`  • Quiz ${quiz}: ${promedio} correctas (${tiempo}s promedio)`);
+        const exhibicionesOrdenadas = Object.entries(stats.visitasPorExhibicion)
+            .sort((a, b) => b[1] - a[1]);
+        
+        exhibicionesOrdenadas.forEach(([nombre, cantidad]) => {
+            const porcentaje = ((cantidad / stats.totalVisitas) * 100).toFixed(1);
+            doc.text(`  • ${nombre}: ${cantidad} visitas (${porcentaje}%)`);
         });
         doc.moveDown(2);
 
-        // Gráfico de quizzes
-        const graficoQuizzes = await generarGraficoBarras(statsQuizzes.promedioCorrectasPorQuizz, 'Promedio Correctas por Quiz');
-        doc.image(graficoQuizzes, { width: 500 });
+        // Gráfico de visitas por exhibición
+        if (Object.keys(stats.visitasPorExhibicion).length > 0) {
+            const graficoVisitas = await generarGraficoBarras(stats.visitasPorExhibicion, 'Visitas por Exhibición');
+            doc.image(graficoVisitas, { width: 500 });
+            doc.moveDown(2);
+        }
+
+        // Nueva página para quizzes
+        doc.addPage();
+
+        // Distribución de Puntajes
+        doc.fontSize(16).text('DISTRIBUCION DE PUNTAJES', { underline: true });
+        doc.moveDown();
+        doc.fontSize(12);
+        
+        if (Object.keys(stats.distribucionPuntajes).length > 0) {
+            doc.text('Puntajes obtenidos por los visitantes:');
+            const puntajesOrdenados = Object.entries(stats.distribucionPuntajes)
+                .sort((a, b) => b[1] - a[1]);
+            
+            puntajesOrdenados.forEach(([puntaje, cantidad]) => {
+                const porcentaje = ((cantidad / stats.visitasConQuiz) * 100).toFixed(1);
+                doc.text(`  • ${puntaje} puntos: ${cantidad} visitantes (${porcentaje}%)`);
+            });
+            doc.moveDown(2);
+
+            // Gráfico de distribución de puntajes
+            const dataPuntajes = {};
+            puntajesOrdenados.forEach(([puntaje, cantidad]) => {
+                dataPuntajes[puntaje] = cantidad;
+            });
+            const graficoPuntajes = await generarGraficoBarras(dataPuntajes, 'Distribución de Puntajes');
+            doc.image(graficoPuntajes, { width: 500 });
+        } else {
+            doc.text('No hay datos de puntajes en este período.');
+        }
+        doc.moveDown(2);
+
+        // Nueva página para preguntas difíciles
+        doc.addPage();
+
+        // Preguntas con más errores
+        doc.fontSize(16).text('PREGUNTAS CON MAS ERRORES', { underline: true });
+        doc.moveDown();
+        doc.fontSize(12);
+        
+        if (stats.preguntasDificiles.length > 0) {
+            doc.text('Top 10 preguntas que más visitantes respondieron incorrectamente:');
+            doc.moveDown();
+            
+            stats.preguntasDificiles.forEach((pregunta, idx) => {
+                doc.fontSize(11).fillColor('#CC0000');
+                doc.text(`${idx + 1}. [${pregunta.errores} errores]`, { continued: true });
+                doc.fillColor('#000000');
+                doc.text(` ${pregunta.texto}`);
+                doc.moveDown(0.5);
+            });
+            doc.moveDown();
+
+            // Gráfico de preguntas difíciles
+            const dataPreguntasDificiles = {};
+            stats.preguntasDificiles.slice(0, 5).forEach((p, idx) => {
+                dataPreguntasDificiles[`P${idx + 1}`] = p.errores;
+            });
+            const graficoDificiles = await generarGraficoBarras(dataPreguntasDificiles, 'Top 5 Preguntas con Más Errores');
+            doc.image(graficoDificiles, { width: 500 });
+        } else {
+            doc.text('No hay datos de errores en preguntas para este período.');
+        }
+        doc.moveDown(2);
+
+        // Análisis Detallado por Quiz (si se seleccionaron quizzes)
+        if (quizzesIds && quizzesIds.length > 0) {
+            for (const quizId of quizzesIds) {
+                // Nueva página para cada quiz
+                doc.addPage();
+                
+                // Obtener análisis del quiz
+                const [analisisData, analisisError] = await getAnalisisQuizService(quizId);
+                
+                if (!analisisError && analisisData) {
+                    const analisis = analisisData;
+                    
+                    // Título del quiz
+                    doc.fontSize(18).fillColor('#000000').text(`ANÁLISIS DETALLADO DEL QUIZ`, { align: 'center', underline: true });
+                    doc.moveDown();
+                    doc.fontSize(16).text(analisis.quiz.titulo, { align: 'center' });
+                    doc.moveDown(0.5);
+                    doc.fontSize(12).text(`Exhibición: ${analisis.quiz.exhibicion}`, { align: 'center' });
+                    doc.text(`Total de Preguntas: ${analisis.quiz.cant_preguntas} | Participantes: ${analisis.total_participantes}`, { align: 'center' });
+                    doc.moveDown(2);
+                    
+                    // Análisis de cada pregunta
+                    analisis.analisis_preguntas.forEach((pregunta, idx) => {
+                        // Verificar si necesitamos una nueva página
+                        if (doc.y > 650) {
+                            doc.addPage();
+                        }
+                        
+                        doc.fontSize(14).fillColor('#5B21B6').text(`Pregunta ${idx + 1}`, { underline: true });
+                        doc.moveDown(0.3);
+                        doc.fontSize(12).fillColor('#000000').text(pregunta.enunciado, { width: 500 });
+                        doc.fontSize(10).fillColor('#666666').text(`(${pregunta.total_respuestas} respuestas totales)`, { width: 500 });
+                        doc.moveDown(0.5);
+                        
+                        // Mostrar cada respuesta con su porcentaje
+                        pregunta.respuestas.forEach((respuesta) => {
+                            const icono = respuesta.es_correcta ? '✓' : '○';
+                            const color = respuesta.es_correcta ? '#059669' : '#6B7280';
+                            
+                            doc.fillColor(color);
+                            doc.fontSize(11);
+                            doc.text(`  ${icono} ${respuesta.texto}`, { continued: true });
+                            doc.fillColor('#000000');
+                            doc.text(` - ${respuesta.porcentaje}% (${respuesta.cantidad} ${respuesta.cantidad === 1 ? 'respuesta' : 'respuestas'})`);
+                            doc.moveDown(0.3);
+                        });
+                        
+                        doc.moveDown(1);
+                        
+                        // Línea divisoria
+                        if (idx < analisis.analisis_preguntas.length - 1) {
+                            doc.strokeColor('#E5E7EB')
+                               .lineWidth(1)
+                               .moveTo(50, doc.y)
+                               .lineTo(550, doc.y)
+                               .stroke();
+                            doc.moveDown(1);
+                        }
+                    });
+                } else {
+                    doc.fontSize(12).fillColor('#CC0000').text(`No se pudo obtener el análisis del quiz con ID ${quizId}`);
+                }
+            }
+        }
+
+        // Pie de página
+        doc.fontSize(10).fillColor('#666666');
+        doc.text('Este informe fue generado automáticamente por el Sistema de Gestión del Museo', { align: 'center' });
+        doc.text(`Fecha de generación: ${new Date().toLocaleString()}`, { align: 'center' });
 
         // Finalizar PDF
         doc.end();

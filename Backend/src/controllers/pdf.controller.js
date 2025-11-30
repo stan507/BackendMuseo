@@ -7,9 +7,12 @@ import { generarInformePDFService } from "../services/pdf.service.js";
  */
 export async function generarInformePDF(req, res) {
     try {
-        const { desde, hasta, preset } = req.query;
+        const { desde, hasta, preset, quizzes } = req.query;
+        
+        // Convertir string de quizzes a array de números
+        const quizzesIds = quizzes ? quizzes.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)) : [];
 
-        const [pdfBuffer, error] = await generarInformePDFService(desde, hasta, preset);
+        const [pdfBuffer, error] = await generarInformePDFService(desde, hasta, preset, quizzesIds);
 
         if (error) {
             return res.status(500).json({ message: error });

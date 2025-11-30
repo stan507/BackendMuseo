@@ -5,7 +5,8 @@ import {
     getQuizzByExhibicionService,
     createQuizzService,
     updateQuizzService,
-    deleteQuizzService
+    deleteQuizzService,
+    activarQuizzService
 } from "../services/quizz.service.js";
 
 // Obtener todos los quizzes
@@ -57,21 +58,24 @@ export async function getQuizzById(req, res) {
     }
 }
 
-// Obtener quiz por exhibición
+// Obtener todos los quizzes de una exhibición
 export async function getQuizzByExhibicion(req, res) {
     try {
         const { id_exhibicion } = req.params;
 
-        const [quizz, error] = await getQuizzByExhibicionService(id_exhibicion);
+        const [quizzes, error] = await getQuizzByExhibicionService(id_exhibicion);
 
         if (error) {
-            return res.status(404).json({
+            return res.status(500).json({
                 message: error,
                 data: null
             });
         }
 
-        res.status(200).json(quizz);
+        res.status(200).json({
+            message: "Quizzes obtenidos exitosamente",
+            data: quizzes
+        });
     } catch (error) {
         console.error("Error en getQuizzByExhibicion:", error);
         res.status(500).json({
@@ -158,6 +162,34 @@ export async function deleteQuizz(req, res) {
         });
     } catch (error) {
         console.error("Error en deleteQuizz:", error);
+        res.status(500).json({
+            message: "Error interno del servidor",
+            data: null
+        });
+    }
+}
+
+// Activar quiz (desactiva los demás de la misma exhibición)
+export async function activarQuizz(req, res) {
+    try {
+        const { id } = req.params;
+
+        const [result, error] = await activarQuizzService(parseInt(id));
+
+        if (error) {
+            const statusCode = error === "Quiz no encontrado" ? 404 : 400;
+            return res.status(statusCode).json({
+                message: error,
+                data: null
+            });
+        }
+
+        res.status(200).json({
+            message: "Quiz activado exitosamente",
+            data: result
+        });
+    } catch (error) {
+        console.error("Error en activarQuizz:", error);
         res.status(500).json({
             message: "Error interno del servidor",
             data: null

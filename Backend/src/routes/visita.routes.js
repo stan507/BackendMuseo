@@ -5,7 +5,10 @@ import {
     updateDuracionVisita,
     getAllVisitas,
     getVisitaById,
-    getVisitasByExhibicion
+    getVisitasByExhibicion,
+    getEstadisticas,
+    getAnalisisQuiz,
+    updateQuizEstado
 } from "../controllers/visita.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
@@ -17,6 +20,12 @@ import {
 import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = Router();
+
+// GET estadísticas (ANTES de otras rutas para evitar conflictos)
+router.get("/estadisticas", authenticate, getEstadisticas);
+
+// GET análisis detallado de un quiz
+router.get("/analisis-quiz/:id", authenticate, getAnalisisQuiz);
 
 // GET all visitas
 router.get("/", authenticate, getAllVisitas);
@@ -32,5 +41,8 @@ router.post("/", authenticate, validate(createVisitaSchema, "body"), createVisit
 
 // PUT actualizar duracion
 router.put("/:id", authenticate, validate(updateDuracionSchema, "body"), updateDuracionVisita);
+
+// PATCH actualizar estado del quiz
+router.patch("/:id/quiz-estado", authenticate, updateQuizEstado);
 
 export default router;

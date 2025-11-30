@@ -4,7 +4,10 @@ import {
     updateDuracionVisitaService,
     getAllVisitasService,
     getVisitaByIdService,
-    getVisitasByExhibicionService
+    getVisitasByExhibicionService,
+    getEstadisticasService,
+    getAnalisisQuizService,
+    updateQuizEstadoService
 } from "../services/visita.service.js";
 
 export async function createVisita(req, res) {
@@ -42,9 +45,14 @@ export async function createVisita(req, res) {
 export async function updateDuracionVisita(req, res) {
     try {
         const { id } = req.params;
-        const { duracion_segundos } = req.body;
+        const { duracion_segundos, puntaje_quiz, respuestas_quiz } = req.body;
 
-        const [visita, error] = await updateDuracionVisitaService(parseInt(id), duracion_segundos);
+        const [visita, error] = await updateDuracionVisitaService(
+            parseInt(id), 
+            duracion_segundos,
+            puntaje_quiz,
+            respuestas_quiz
+        );
 
         if (error) {
             const statusCode = error === "Visita no encontrada" ? 404 : 500;
@@ -55,10 +63,12 @@ export async function updateDuracionVisita(req, res) {
         }
 
         res.status(200).json({
-            message: "Duración de visita actualizada exitosamente",
+            message: "Visita actualizada exitosamente",
             data: {
                 id_visita: visita.id_visita,
-                duracion_segundos: visita.duracion_segundos
+                duracion_segundos: visita.duracion_segundos,
+                puntaje_quiz: visita.puntaje_quiz,
+                respuestas_guardadas: visita.respuestas_quiz ? visita.respuestas_quiz.length : 0
             }
         });
     } catch (error) {
@@ -124,6 +134,98 @@ export async function getVisitasByExhibicion(req, res) {
         res.status(200).json(visitas);
     } catch (error) {
         console.error("Error en getVisitasByExhibicion:", error);
+        res.status(500).json({ message: "Error interno del servidor" });
+    }
+}
+
+/**
+ * GET /api/visita/estadisticas?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+ * Obtener estadísticas de visitas y quizzes
+ */
+export async function getEstadisticas(req, res) {
+    try {
+        const { desde, hasta } = req.query;
+
+        if (!desde || !hasta) {
+            return res.status(400).json({ 
+                message: "Los parámetros 'desde' y 'hasta' son requeridos" 
+            });
+        }
+
+        const [estadisticas, error] = await getEstadisticasService(desde, hasta);
+
+        if (error) {
+            return res.status(500).json({ message: error });
+        }
+
+        res.status(200).json({
+            message: "Estadísticas obtenidas exitosamente",
+            data: estadisticas
+        });
+    } catch (error) {
+        console.error("Error en getEstadisticas:", error);
+        res.status(500).json({ message: "Error interno del servidor" });
+    }
+}
+
+/**
+ * GET /api/visita/analisis-quiz/:id
+ * Obtener análisis detallado de un quiz con porcentajes por respuesta
+ */
+export async function getAnalisisQuiz(req, res) {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ 
+                message: "El ID del quiz es requerido" 
+            });
+        }
+
+        const [analisis, error] = await getAnalisisQuizService(parseInt(id));
+
+        if (error) {
+            const statusCode = error === "Quiz no encontrado" ? 404 : 500;
+            return res.status(statusCode).json({ message: error });
+        }
+
+        res.status(200).json({
+            message: "Análisis del quiz obtenido exitosamente",
+            data: analisis
+        });
+    } catch (error) {
+        console.error("Error en getAnalisisQuiz:", error);
+        res.status(500).json({ message: "Error interno del servidor" });
+    }
+}
+
+/**
+ * PATCH /api/visita/:id/quiz-estado - Actualizar estado del quiz (iniciado/abandonado)
+ */
+export async function updateQuizEstado(req, res) {
+    try {
+        const { id } = req.params;
+        const { quiz_iniciado } = req.body;
+
+        if (quiz_iniciado === undefined) {
+            return res.status(400).json({ 
+                message: "El campo quiz_iniciado es requerido" 
+            });
+        }
+
+        const [visita, error] = await updateQuizEstadoService(parseInt(id), quiz_iniciado);
+
+        if (error) {
+            const statusCode = error === "Visita no encontrada" ? 404 : 500;
+            return res.status(statusCode).json({ message: error });
+        }
+
+        res.status(200).json({
+            message: "Estado del quiz actualizado exitosamente",
+            data: visita
+        });
+    } catch (error) {
+        console.error("Error en updateQuizEstado:", error);
         res.status(500).json({ message: "Error interno del servidor" });
     }
 }
