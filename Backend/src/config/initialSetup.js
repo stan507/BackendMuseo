@@ -236,21 +236,32 @@ export async function seedDatabase() {
         // Recalcular quizzCount después de insertar
         const quizzCountActual = await quizzRepo.count();
 
-        // 4. VISITAS DE EJEMPLO con diferentes escenarios de quiz
+        // 4. VISITAS DE EJEMPLO con diferentes escenarios de quiz y horarios variados
         const visitaRepo = AppDataSource.getRepository("Visita");
         const visitaCount = await visitaRepo.count();
         if (visitaCount === 0 && admin) {
-            console.log("Insertando visitas de ejemplo con escenarios de quiz...");
+            console.log("Insertando visitas de ejemplo con escenarios de quiz y horarios variados...");
             
             // Obtener los quizzes para simular respuestas realistas
             const quizzHuemul = await quizzRepo.findOne({ where: { id_exhibicion: "huemul" }, relations: ["preguntas", "preguntas.respuestas"] });
             const quizzHelice = await quizzRepo.findOne({ where: { id_exhibicion: "helice" }, relations: ["preguntas", "preguntas.respuestas"] });
             
-            // Escenario 1: Usuario completa el quiz del Huemul perfectamente
-            const visitaCompletada = await visitaRepo.save({
+            // Función auxiliar para crear fecha con hora específica (hoy con hora personalizada)
+            const crearFechaConHora = (hora, minutos = 0) => {
+                const fecha = new Date();
+                fecha.setHours(hora, minutos, 0, 0);
+                return fecha;
+            };
+
+            // Crear visitas en diferentes horarios para simular tráfico realista
+            const visitasAInsertar = [];
+
+            // Horario matutino (10:00 - 13:00) - Visitas de martes a viernes
+            visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "huemul",
-                duracion_segundos: 420, // 7 minutos
+                fecha_visita: crearFechaConHora(10, 15),
+                duracion_segundos: 420,
                 quiz_iniciado: true,
                 puntaje_quiz: quizzHuemul ? quizzHuemul.cant_preguntas : 3,
                 respuestas_quiz: quizzHuemul ? quizzHuemul.preguntas.map((pregunta, idx) => ({
@@ -263,70 +274,157 @@ export async function seedDatabase() {
                 })) : []
             });
 
-            // Escenario 2: Usuario abre el quiz de Hélice pero lo abandona en la pregunta 2
-            const visitaAbandonada = await visitaRepo.save({
+            visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "helice",
-                duracion_segundos: 180, // 3 minutos
-                quiz_iniciado: true,
-                puntaje_quiz: null, // No completó
-                respuestas_quiz: quizzHelice ? [
-                    {
-                        id_pregunta: quizzHelice.preguntas[0]?.id_pregunta,
-                        texto_pregunta: quizzHelice.preguntas[0]?.texto,
-                        id_respuesta_seleccionada: quizzHelice.preguntas[0]?.respuestas[0]?.id_respuesta,
-                        texto_respuesta_seleccionada: quizzHelice.preguntas[0]?.respuestas[0]?.texto,
-                        es_correcta: quizzHelice.preguntas[0]?.respuestas[0]?.es_correcta || false,
-                        tiempo_respuesta_segundos: 12
-                    }
-                    // Abandonó después de la primera pregunta
-                ] : []
-            });
-
-            // Escenario 3: Usuario completa el quiz de Chemamüll con algunos errores
-            const visitaParcial = await visitaRepo.save({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                duracion_segundos: 390, // 6.5 minutos
-                quiz_iniciado: true,
-                puntaje_quiz: 2, // 2 de 3 correctas
-                respuestas_quiz: [
-                    {
-                        texto_pregunta: "Pregunta 1 sobre Chemamüll",
-                        texto_respuesta_seleccionada: "Respuesta correcta",
-                        es_correcta: true,
-                        tiempo_respuesta_segundos: 18
-                    },
-                    {
-                        texto_pregunta: "Pregunta 2 sobre Chemamüll",
-                        texto_respuesta_seleccionada: "Respuesta incorrecta",
-                        es_correcta: false,
-                        tiempo_respuesta_segundos: 22
-                    },
-                    {
-                        texto_pregunta: "Pregunta 3 sobre Chemamüll",
-                        texto_respuesta_seleccionada: "Respuesta correcta",
-                        es_correcta: true,
-                        tiempo_respuesta_segundos: 16
-                    }
-                ]
-            });
-
-            // Escenario 4: Usuario solo visita sin abrir el quiz
-            const visitaSinQuiz = await visitaRepo.save({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                duracion_segundos: 150, // 2.5 minutos
+                fecha_visita: crearFechaConHora(10, 45),
+                duracion_segundos: 300,
                 quiz_iniciado: false,
                 puntaje_quiz: null,
                 respuestas_quiz: null
             });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFechaConHora(11, 20),
+                duracion_segundos: 360,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: [
+                    { texto_pregunta: "Pregunta 1", texto_respuesta_seleccionada: "Respuesta correcta", es_correcta: true, tiempo_respuesta_segundos: 18 },
+                    { texto_pregunta: "Pregunta 2", texto_respuesta_seleccionada: "Respuesta incorrecta", es_correcta: false, tiempo_respuesta_segundos: 22 }
+                ]
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFechaConHora(12, 30),
+                duracion_segundos: 280,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            // Horario tarde PICO (14:00 - 17:30) - Martes a viernes, mayor trafico
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFechaConHora(14, 10),
+                duracion_segundos: 450,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFechaConHora(14, 35),
+                duracion_segundos: 380,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFechaConHora(15, 0),
+                duracion_segundos: 240,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFechaConHora(15, 20),
+                duracion_segundos: 420,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFechaConHora(15, 50),
+                duracion_segundos: 390,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFechaConHora(16, 15),
+                duracion_segundos: 330,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFechaConHora(16, 45),
+                duracion_segundos: 280,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFechaConHora(17, 10),
+                duracion_segundos: 360,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            // Horario fin de semana sabado/domingo (14:30 - 17:30) - Trafico moderado
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFechaConHora(14, 40),
+                duracion_segundos: 300,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFechaConHora(15, 30),
+                duracion_segundos: 240,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFechaConHora(16, 50),
+                duracion_segundos: 280,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            await visitaRepo.save(visitasAInsertar);
             
-            console.log("  Se insertaron 4 visitas de ejemplo:");
-            console.log("    - 1 quiz completado perfectamente (Huemul)");
-            console.log("    - 1 quiz abandonado en pregunta 2 (Hélice)");
-            console.log("    - 1 quiz completado con errores (Chemamüll)");
-            console.log("    - 1 visita sin quiz (Cocodrilo)");
+            console.log(`  Se insertaron ${visitasAInsertar.length} visitas de ejemplo con horarios variados:`);
+            console.log("    - Horario matutino (10:00-13:00): 4 visitas");
+            console.log("    - Horario PICO tarde (14:00-17:30): 11 visitas");
+            console.log("    - Total alineado con horario del museo: 10:00-13:00, 14:00-17:30");
         } else {
             console.log(`  Ya existen ${visitaCount} visita(s).`);
         }
