@@ -24,7 +24,8 @@ export default function MinIO() {
       setArchivos(response.data.files || []);
     } catch (error) {
       console.error('Error al cargar archivos:', error);
-      alert('Error al cargar archivos de MinIO');
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+      alert(`Error al cargar archivos de MinIO: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
