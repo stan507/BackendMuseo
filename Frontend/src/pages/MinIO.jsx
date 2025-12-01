@@ -4,22 +4,44 @@ import api from '../services/api';
 
 export default function MinIO() {
   const navigate = useNavigate();
+  const [exhibiciones, setExhibiciones] = useState([]);
+  const [exhibicionSeleccionada, setExhibicionSeleccionada] = useState('');
   const [archivos, setArchivos] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [prefix, setPrefix] = useState('');
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
-    cargarArchivos();
+    cargarExhibiciones();
+  }, []);
+
+  useEffect(() => {
+    if (exhibicionSeleccionada) {
+      cargarArchivos();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefix]);
+  }, [exhibicionSeleccionada]);
+
+  const cargarExhibiciones = async () => {
+    try {
+      const response = await api.get('/exhibicion');
+      setExhibiciones(response.data.data || []);
+    } catch (error) {
+      console.error('Error al cargar exhibiciones:', error);
+      alert('Error al cargar exhibiciones');
+    }
+  };
 
   const cargarArchivos = async () => {
+    if (!exhibicionSeleccionada) {
+      setArchivos([]);
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await api.get('/museo/list-files', {
-        params: { prefix: prefix || '' }
+        params: { prefix: exhibicionSeleccionada }
       });
       setArchivos(response.data.files || []);
     } catch (error) {
@@ -37,9 +59,14 @@ export default function MinIO() {
       return;
     }
 
+    if (!exhibicionSeleccionada) {
+      alert('Selecciona una exhibición primero');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('file', archivoSeleccionado);
-    if (prefix) formData.append('prefix', prefix);
+    formData.append('prefix', exhibicionSeleccionada);
 
     setLoading(true);
     setUploadProgress(0);
@@ -119,20 +146,25 @@ export default function MinIO() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Panel de Carga */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Subir Archivo</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Gestionar Archivos por Exhibición</h2>
           
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Carpeta (prefix)
+                Seleccionar Exhibición
               </label>
-              <input
-                type="text"
-                value={prefix}
-                onChange={(e) => setPrefix(e.target.value)}
-                placeholder="exhibiciones/huemul/"
+              <select
+                value={exhibicionSeleccionada}
+                onChange={(e) => setExhibicionSeleccionada(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                <option value="">-- Selecciona una exhibición --</option>
+                {exhibiciones.map((exhib) => (
+                  <option key={exhib.id} value={exhib.nombre_carpeta}>
+                    {exhib.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -157,11 +189,17 @@ export default function MinIO() {
 
             <button
               onClick={handleUpload}
-              disabled={loading || !archivoSeleccionado}
+              disabled={loading || !archivoSeleccionado || !exhibicionSeleccionada}
               className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
             >
               {loading ? 'Subiendo...' : 'Subir Archivo'}
             </button>
+            
+            {!exhibicionSeleccionada && (
+              <p className="text-sm text-gray-500 text-center">
+                Selecciona una exhibición para gestionar sus archivos
+              </p>
+            )}
           </div>
         </div>
 
@@ -178,10 +216,18 @@ export default function MinIO() {
             </button>
           </div>
 
-          {loading && <p className="text-gray-500">Cargando...</p>}
+          {!exhibicionSeleccionada && (
+            <p className="text-gray-500 text-center py-8">
+              Selecciona una exhibición para ver sus archivos
+            </p>
+          )}
 
-          {!loading && archivos.length === 0 && (
-            <p className="text-gray-500">No hay archivos en esta carpeta</p>
+          {exhibicionSeleccionada && loading && (
+            <p className="text-gray-500">Cargando archivos de {exhibicionSeleccionada}...</p>
+          )}
+
+          {exhibicionSeleccionada && !loading && archivos.length === 0 && (
+            <p className="text-gray-500">No hay archivos en esta exhibición</p>
           )}
 
           {!loading && archivos.length > 0 && (
