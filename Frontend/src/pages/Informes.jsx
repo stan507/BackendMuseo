@@ -321,6 +321,69 @@ export default function Informes() {
               </div>
             )}
 
+            {/* Rango Horario Pico */}
+            {estadisticas.rangoHorarioPico && estadisticas.rangoHorarioPico.visitas > 0 && (
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl shadow-lg p-6 border-2 border-amber-300">
+                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  ⏰ Horario de Mayor Afluencia
+                </h3>
+                <div className="text-center">
+                  <div className="text-5xl font-bold text-amber-600 mb-2">
+                    {estadisticas.rangoHorarioPico.descripcion}
+                  </div>
+                  <div className="text-2xl font-semibold text-gray-700 mb-3">
+                    {estadisticas.rangoHorarioPico.visitas} visitas
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Este es el rango horario con mayor concentración de visitantes en el periodo seleccionado
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Distribución Horaria */}
+            {estadisticas.distribucionHoraria && estadisticas.distribucionHoraria.length > 0 && (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">🕐 Distribución de Visitas por Hora</h3>
+                <div className="space-y-2">
+                  {estadisticas.distribucionHoraria.map((hora, idx) => {
+                    const maxVisitas = Math.max(...estadisticas.distribucionHoraria.map(h => h.visitas));
+                    const porcentaje = (hora.visitas / maxVisitas) * 100;
+                    const esHoraPico = hora.hora >= estadisticas.rangoHorarioPico.inicio && 
+                                       hora.hora < estadisticas.rangoHorarioPico.fin;
+                    
+                    return (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className="w-16 text-right">
+                          <span className={`font-semibold ${esHoraPico ? 'text-amber-600' : 'text-gray-700'}`}>
+                            {hora.horaFormato}
+                          </span>
+                        </div>
+                        <div className="flex-1 bg-gray-200 rounded-full h-8 relative overflow-hidden">
+                          <div 
+                            className={`h-8 rounded-full flex items-center justify-end pr-3 transition-all ${
+                              esHoraPico 
+                                ? 'bg-gradient-to-r from-amber-400 to-orange-500' 
+                                : 'bg-gradient-to-r from-blue-400 to-blue-600'
+                            }`}
+                            style={{ width: `${porcentaje}%` }}
+                          >
+                            <span className="text-white font-bold text-sm">{hora.visitas}</span>
+                          </div>
+                        </div>
+                        {esHoraPico && (
+                          <span className="text-amber-600 font-bold text-xs">🔥 PICO</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 text-xs text-gray-500 text-center">
+                  💡 Las horas destacadas en naranja representan el rango de mayor afluencia
+                </div>
+              </div>
+            )}
+
             {/* Visitas por Día */}
             {estadisticas.visitasPorDia.length > 0 && (
               <div className="bg-white rounded-xl shadow-lg p-6">

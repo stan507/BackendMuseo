@@ -147,7 +147,7 @@ export default function MinIO() {
 
   const handleUpload = async () => {
     if (!archivoSeleccionado) {
-      alert('Selecciona un archivo primero');
+      alert('Selecciona uno o más archivos primero');
       return;
     }
 
@@ -156,45 +156,57 @@ export default function MinIO() {
       return;
     }
 
-    // Validar extensión
-    if (!validarExtension(archivoSeleccionado)) {
-      const tipo = tiposArchivo.find(t => t.value === tipoArchivo);
-      alert(`❌ Archivo inválido para ${tipo.label}\n\nExtensiones permitidas: ${tipo.extensiones.join(', ')}`);
-      return;
-    }
+    // Preparar lista de archivos (soportar FileList o File único)
+    const archivos = archivoSeleccionado instanceof FileList 
+      ? Array.from(archivoSeleccionado)
+      : [archivoSeleccionado];
 
-    // Validar nombre de archivo
-    const validacionNombre = validarNombreArchivo(archivoSeleccionado.name);
-    if (!validacionNombre.valido) {
-      const nombreSanitizado = sanitizarNombreArchivo(archivoSeleccionado.name);
-      const confirmar = window.confirm(
-        `❌ ${validacionNombre.mensaje}\n\n` +
-        `Nombre actual: ${archivoSeleccionado.name}\n` +
-        `Nombre sugerido: ${nombreSanitizado}\n\n` +
-        `¿Deseas subir el archivo con el nombre corregido?`
-      );
-      
-      if (!confirmar) {
+    // Validar todos los archivos antes de subir
+    const archivosValidados = [];
+    
+    for (const archivo of archivos) {
+      // Validar extensión
+      if (!validarExtension(archivo)) {
+        const tipo = tiposArchivo.find(t => t.value === tipoArchivo);
+        alert(`❌ "${archivo.name}" no es válido para ${tipo.label}\n\nExtensiones permitidas: ${tipo.extensiones.join(', ')}`);
         return;
       }
-      
-      // Crear nuevo archivo con nombre sanitizado
-      const archivoCorregido = new File([archivoSeleccionado], nombreSanitizado, {
-        type: archivoSeleccionado.type
-      });
-      setArchivoSeleccionado(archivoCorregido);
-      
-      // Continuar con el archivo corregido
-      await subirArchivoConNombre(archivoCorregido);
-      return;
+
+      // Validar nombre de archivo
+      const validacionNombre = validarNombreArchivo(archivo.name);
+      if (!validacionNombre.valido) {
+        const nombreSanitizado = sanitizarNombreArchivo(archivo.name);
+        const confirmar = window.confirm(
+          `❌ "${archivo.name}": ${validacionNombre.mensaje}\n\n` +
+          `Nombre sugerido: ${nombreSanitizado}\n\n` +
+          `¿Deseas subir este archivo con el nombre corregido?`
+        );
+        
+        if (!confirmar) {
+          return;
+        }
+        
+        // Crear nuevo archivo con nombre sanitizado
+        const archivoCorregido = new File([archivo], nombreSanitizado, {
+          type: archivo.type
+        });
+        archivosValidados.push(archivoCorregido);
+      } else {
+        archivosValidados.push(archivo);
+      }
     }
 
-    await subirArchivoConNombre(archivoSeleccionado);
+    await subirArchivos(archivosValidados);
   };
 
-  const subirArchivoConNombre = async (archivo) => {
+  const subirArchivos = async (archivos) => {
     const formData = new FormData();
-    formData.append('file', archivo);
+    
+    // Agregar todos los archivos con el campo 'files' (array)
+    archivos.forEach(archivo => {
+      formData.append('files', archivo);
+    });
+    
     formData.append('subcarpeta', exhibicionSeleccionada);
     formData.append('tipo', tipoArchivo);
 
@@ -202,21 +214,29 @@ export default function MinIO() {
     setUploadProgress(0);
 
     try {
-      await api.post('/museo/upload', formData, {
+      const response = await api.post('/museo/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(percentCompleted);
         }
       });
-      alert('✅ Archivo subido exitosamente');
+      
+      const mensaje = response.data.message || `✅ ${archivos.length} archivo(s) subido(s)`;
+      
+      if (response.data.errores && response.data.errores.length > 0) {
+        alert(`⚠️ ${mensaje}\n\nErrores:\n${response.data.errores.map(e => `- ${e.archivo}: ${e.error}`).join('\n')}`);
+      } else {
+        alert(mensaje);
+      }
+      
       setArchivoSeleccionado(null);
       setUploadProgress(0);
       cargarArchivos();
     } catch (error) {
-      console.error('Error al subir archivo:', error);
+      console.error('Error al subir archivos:', error);
       const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message;
-      alert(`❌ Error al subir archivo:\n${errorMsg}`);
+      alert(`❌ Error al subir archivos:\n${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -355,14 +375,20 @@ export default function MinIO() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Archivo
+                Archivo(s) - Selección Múltiple
               </label>
               <input
                 type="file"
-                onChange={(e) => setArchivoSeleccionado(e.target.files[0])}
+                multiple
+                onChange={(e) => setArchivoSeleccionado(e.target.files)}
                 disabled={!exhibicionSeleccionada || !tipoArchivo}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
+              {archivoSeleccionado && archivoSeleccionado.length > 0 && (
+                <p className="text-xs text-gray-600 mt-1">
+                  {archivoSeleccionado.length} archivo(s) seleccionado(s)
+                </p>
+              )}
             </div>
 
             {uploadProgress > 0 && uploadProgress < 100 && (
@@ -376,10 +402,10 @@ export default function MinIO() {
 
             <button
               onClick={handleUpload}
-              disabled={loading || !archivoSeleccionado || !exhibicionSeleccionada || !tipoArchivo}
+              disabled={loading || !archivoSeleccionado || archivoSeleccionado.length === 0 || !exhibicionSeleccionada || !tipoArchivo}
               className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
             >
-              {loading ? 'Subiendo...' : 'Subir Archivo'}
+              {loading ? 'Subiendo...' : archivoSeleccionado && archivoSeleccionado.length > 1 ? `Subir ${archivoSeleccionado.length} Archivos` : 'Subir Archivo(s)'}
             </button>
             
             {!exhibicionSeleccionada && (

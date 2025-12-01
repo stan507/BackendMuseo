@@ -12,8 +12,8 @@ const router = Router();
 router.get("/presigned-url", authenticate, validate(getPresignedUrlSchema, 'query'), handleGetUrl);
 router.get("/list-files", authenticate, validate(listFilesSchema, 'query'), handleListFiles);
 
-// Upload de archivo (solo admin/encargado)
-router.post("/upload", authenticate, upload.single('file'), handleUploadFile);
+// Upload de archivo(s) (solo admin/encargado) - soporta múltiples archivos
+router.post("/upload", authenticate, upload.array('files', 10), handleUploadFile);
 
 // Delete de archivo (solo admin/encargado)
 router.delete("/file", authenticate, handleDeleteFile);

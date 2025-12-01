@@ -208,6 +208,46 @@ export async function getEstadisticasService(desde, hasta) {
             visitasPorDia[fecha] = (visitasPorDia[fecha] || 0) + 1;
         });
 
+        // Análisis de rangos horarios de mayor tráfico
+        const visitasPorHora = {};
+        visitas.forEach(v => {
+            const hora = v.fecha_visita.getHours();
+            visitasPorHora[hora] = (visitasPorHora[hora] || 0) + 1;
+        });
+
+        // Encontrar el rango horario pico (2 horas consecutivas con más visitas)
+        let maxVisitas = 0;
+        let rangoHorarioPico = { inicio: 0, fin: 0, visitas: 0 };
+        
+        // Buscar ventanas de 1, 2 y 3 horas
+        for (let ventana = 1; ventana <= 3; ventana++) {
+            for (let horaInicio = 0; horaInicio <= 23 - ventana; horaInicio++) {
+                let visitasEnVentana = 0;
+                for (let i = 0; i < ventana; i++) {
+                    visitasEnVentana += (visitasPorHora[horaInicio + i] || 0);
+                }
+                
+                if (visitasEnVentana > maxVisitas) {
+                    maxVisitas = visitasEnVentana;
+                    rangoHorarioPico = {
+                        inicio: horaInicio,
+                        fin: horaInicio + ventana,
+                        visitas: visitasEnVentana,
+                        descripcion: `${String(horaInicio).padStart(2, '0')}:00 - ${String(horaInicio + ventana).padStart(2, '0')}:00`
+                    };
+                }
+            }
+        }
+
+        // Distribución completa por hora
+        const distribucionHoraria = Object.keys(visitasPorHora)
+            .sort((a, b) => parseInt(a) - parseInt(b))
+            .map(hora => ({
+                hora: parseInt(hora),
+                horaFormato: `${String(hora).padStart(2, '0')}:00`,
+                visitas: visitasPorHora[hora]
+            }));
+
         // Analizar preguntas más difíciles (más errores)
         const preguntasDificiles = {};
         visitas.forEach(v => {
@@ -243,6 +283,8 @@ export async function getEstadisticasService(desde, hasta) {
                 fecha,
                 cantidad: visitasPorDia[fecha]
             })),
+            rangoHorarioPico,
+            distribucionHoraria,
             preguntasDificiles: Object.values(preguntasDificiles)
                 .sort((a, b) => b.errores - a.errores)
                 .slice(0, 10) // Top 10 preguntas con más errores
@@ -250,6 +292,72 @@ export async function getEstadisticasService(desde, hasta) {
     } catch (error) {
         console.error("Error en getEstadisticasService:", error);
         return [null, "Error al obtener estadísticas"];
+    }
+}
+
+/**
+ * Obtener embudo de conversión (funnel)
+ * Muestra el recorrido: visitaron → abrieron quiz → completaron quiz
+ */
+export async function getEmbudoConversionService(desde, hasta) {
+    try {
+        const query = `
+            SELECT 
+                COUNT(*) as total_visitas,
+                COUNT(CASE WHEN quiz_iniciado = true THEN 1 END) as quiz_abiertos,
+                COUNT(CASE WHEN puntaje_quiz IS NOT NULL THEN 1 END) as quiz_completados,
+                COUNT(CASE WHEN quiz_iniciado = true AND puntaje_quiz IS NULL THEN 1 END) as quiz_abandonados
+            FROM visita
+            WHERE fecha_visita >= $1 AND fecha_visita <= $2
+        `;
+        
+        const resultado = await AppDataSource.query(query, [desde, hasta + ' 23:59:59']);
+        const datos = resultado[0];
+        
+        const totalVisitas = parseInt(datos.total_visitas);
+        const quizAbiertos = parseInt(datos.quiz_abiertos);
+        const quizCompletados = parseInt(datos.quiz_completados);
+        const quizAbandonados = parseInt(datos.quiz_abandonados);
+        
+        // Calcular tasas de conversión
+        const tasaApertura = totalVisitas > 0 ? ((quizAbiertos / totalVisitas) * 100).toFixed(2) : 0;
+        const tasaComplecion = quizAbiertos > 0 ? ((quizCompletados / quizAbiertos) * 100).toFixed(2) : 0;
+        const tasaAbandonoGeneral = totalVisitas > 0 ? ((quizAbandonados / totalVisitas) * 100).toFixed(2) : 0;
+        
+        return [{
+            embudo: [
+                {
+                    etapa: 'Visitaron exhibición',
+                    cantidad: totalVisitas,
+                    porcentaje: 100,
+                    descripcion: 'Usuarios que accedieron a alguna exhibición'
+                },
+                {
+                    etapa: 'Abrieron quiz',
+                    cantidad: quizAbiertos,
+                    porcentaje: parseFloat(tasaApertura),
+                    descripcion: 'Usuarios que hicieron clic en el botón del quiz'
+                },
+                {
+                    etapa: 'Completaron quiz',
+                    cantidad: quizCompletados,
+                    porcentaje: totalVisitas > 0 ? ((quizCompletados / totalVisitas) * 100).toFixed(2) : 0,
+                    descripcion: 'Usuarios que terminaron y enviaron el quiz'
+                }
+            ],
+            metricas: {
+                totalVisitas,
+                quizAbiertos,
+                quizCompletados,
+                quizAbandonados,
+                tasaApertura: parseFloat(tasaApertura),
+                tasaComplecion: parseFloat(tasaComplecion),
+                tasaAbandonoGeneral: parseFloat(tasaAbandonoGeneral)
+            }
+        }, null];
+    } catch (error) {
+        console.error("Error en getEmbudoConversionService:", error);
+        return [null, "Error al obtener embudo de conversión"];
     }
 }
 

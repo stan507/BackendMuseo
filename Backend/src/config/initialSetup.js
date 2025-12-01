@@ -236,20 +236,97 @@ export async function seedDatabase() {
         // Recalcular quizzCount después de insertar
         const quizzCountActual = await quizzRepo.count();
 
-        // 4. VISITAS DE EJEMPLO (admin visita cada exhibición)
+        // 4. VISITAS DE EJEMPLO con diferentes escenarios de quiz
         const visitaRepo = AppDataSource.getRepository("Visita");
         const visitaCount = await visitaRepo.count();
         if (visitaCount === 0 && admin) {
-            console.log("Insertando visitas de ejemplo...");
+            console.log("Insertando visitas de ejemplo con escenarios de quiz...");
             
-            await visitaRepo.save([
-                { id_usuario: admin.id_usuario, id_exhibicion: "huemul", duracion_segundos: 180 },
-                { id_usuario: admin.id_usuario, id_exhibicion: "helice", duracion_segundos: 240 },
-                { id_usuario: admin.id_usuario, id_exhibicion: "chemomul", duracion_segundos: 300 },
-                { id_usuario: admin.id_usuario, id_exhibicion: "cocodrilo", duracion_segundos: 150 }
-            ]);
+            // Obtener los quizzes para simular respuestas realistas
+            const quizzHuemul = await quizzRepo.findOne({ where: { id_exhibicion: "huemul" }, relations: ["preguntas", "preguntas.respuestas"] });
+            const quizzHelice = await quizzRepo.findOne({ where: { id_exhibicion: "helice" }, relations: ["preguntas", "preguntas.respuestas"] });
             
-            console.log("  Se insertaron 4 visitas de ejemplo.");
+            // Escenario 1: Usuario completa el quiz del Huemul perfectamente
+            const visitaCompletada = await visitaRepo.save({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                duracion_segundos: 420, // 7 minutos
+                quiz_iniciado: true,
+                puntaje_quiz: quizzHuemul ? quizzHuemul.cant_preguntas : 3,
+                respuestas_quiz: quizzHuemul ? quizzHuemul.preguntas.map((pregunta, idx) => ({
+                    id_pregunta: pregunta.id_pregunta,
+                    texto_pregunta: pregunta.texto,
+                    id_respuesta_seleccionada: pregunta.respuestas.find(r => r.es_correcta)?.id_respuesta,
+                    texto_respuesta_seleccionada: pregunta.respuestas.find(r => r.es_correcta)?.texto,
+                    es_correcta: true,
+                    tiempo_respuesta_segundos: 15 + idx * 5
+                })) : []
+            });
+
+            // Escenario 2: Usuario abre el quiz de Hélice pero lo abandona en la pregunta 2
+            const visitaAbandonada = await visitaRepo.save({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                duracion_segundos: 180, // 3 minutos
+                quiz_iniciado: true,
+                puntaje_quiz: null, // No completó
+                respuestas_quiz: quizzHelice ? [
+                    {
+                        id_pregunta: quizzHelice.preguntas[0]?.id_pregunta,
+                        texto_pregunta: quizzHelice.preguntas[0]?.texto,
+                        id_respuesta_seleccionada: quizzHelice.preguntas[0]?.respuestas[0]?.id_respuesta,
+                        texto_respuesta_seleccionada: quizzHelice.preguntas[0]?.respuestas[0]?.texto,
+                        es_correcta: quizzHelice.preguntas[0]?.respuestas[0]?.es_correcta || false,
+                        tiempo_respuesta_segundos: 12
+                    }
+                    // Abandonó después de la primera pregunta
+                ] : []
+            });
+
+            // Escenario 3: Usuario completa el quiz de Chemamüll con algunos errores
+            const visitaParcial = await visitaRepo.save({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                duracion_segundos: 390, // 6.5 minutos
+                quiz_iniciado: true,
+                puntaje_quiz: 2, // 2 de 3 correctas
+                respuestas_quiz: [
+                    {
+                        texto_pregunta: "Pregunta 1 sobre Chemamüll",
+                        texto_respuesta_seleccionada: "Respuesta correcta",
+                        es_correcta: true,
+                        tiempo_respuesta_segundos: 18
+                    },
+                    {
+                        texto_pregunta: "Pregunta 2 sobre Chemamüll",
+                        texto_respuesta_seleccionada: "Respuesta incorrecta",
+                        es_correcta: false,
+                        tiempo_respuesta_segundos: 22
+                    },
+                    {
+                        texto_pregunta: "Pregunta 3 sobre Chemamüll",
+                        texto_respuesta_seleccionada: "Respuesta correcta",
+                        es_correcta: true,
+                        tiempo_respuesta_segundos: 16
+                    }
+                ]
+            });
+
+            // Escenario 4: Usuario solo visita sin abrir el quiz
+            const visitaSinQuiz = await visitaRepo.save({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                duracion_segundos: 150, // 2.5 minutos
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+            
+            console.log("  Se insertaron 4 visitas de ejemplo:");
+            console.log("    - 1 quiz completado perfectamente (Huemul)");
+            console.log("    - 1 quiz abandonado en pregunta 2 (Hélice)");
+            console.log("    - 1 quiz completado con errores (Chemamüll)");
+            console.log("    - 1 visita sin quiz (Cocodrilo)");
         } else {
             console.log(`  Ya existen ${visitaCount} visita(s).`);
         }

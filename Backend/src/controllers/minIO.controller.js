@@ -25,14 +25,17 @@ export const handleListFiles = async (req, res) => {
     }
 };
 
-// Upload de archivo
+// Upload de archivo(s) - soporta múltiples archivos
 export const handleUploadFile = async (req, res) => {
     try {
         const { subcarpeta, tipo } = req.body;
         
-        if (!req.file) {
+        // Multer puede parsear múltiples archivos en req.files o un solo archivo en req.file
+        const archivos = req.files || (req.file ? [req.file] : []);
+        
+        if (!archivos || archivos.length === 0) {
             return res.status(400).json({
-                message: "No se proporcionó ningún archivo",
+                message: "No se proporcionaron archivos",
                 data: null
             });
         }
@@ -44,51 +47,10 @@ export const handleUploadFile = async (req, res) => {
             });
         }
 
-        // Validar nombre de archivo
-        const nombreArchivo = req.file.originalname;
+        // Validaciones comunes
         const caracteresProblematicos = /[^a-zA-Z0-9._-]/g;
-        
-        if (caracteresProblematicos.test(nombreArchivo)) {
-            return res.status(400).json({
-                message: `Nombre de archivo inválido: "${nombreArchivo}". Solo se permiten letras, números, guiones, guiones bajos y puntos.`,
-                data: null
-            });
-        }
-
-        if (nombreArchivo.startsWith('.') || nombreArchivo.startsWith('-')) {
-            return res.status(400).json({
-                message: "El nombre de archivo no puede comenzar con punto o guion",
-                data: null
-            });
-        }
-
-        if (nombreArchivo.length > 200) {
-            return res.status(400).json({
-                message: "El nombre de archivo es demasiado largo (máximo 200 caracteres)",
-                data: null
-            });
-        }
-        
-        // Validar subcarpeta
         const subcarpetasValidas = ['huemul', 'helice', 'chemomul', 'cocodrilo'];
-        if (!subcarpetasValidas.includes(subcarpeta)) {
-            return res.status(400).json({
-                message: `subcarpeta inválida. Debe ser: ${subcarpetasValidas.join(', ')}`,
-                data: null
-            });
-        }
-        
-        // Validar tipo
         const tiposValidos = ['videos', 'fotos', 'audios', 'modelo3D', 'textura'];
-        if (!tiposValidos.includes(tipo)) {
-            return res.status(400).json({
-                message: `tipo inválido. Debe ser: ${tiposValidos.join(', ')}`,
-                data: null
-            });
-        }
-        
-        // Validar extensión según tipo
-        const ext = req.file.originalname.toLowerCase().split('.').pop();
         const extensionesPorTipo = {
             fotos: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
             videos: ['mp4', 'mpeg', 'mpg', 'mov', 'avi', 'webm'],
@@ -96,36 +58,103 @@ export const handleUploadFile = async (req, res) => {
             modelo3D: ['fbx', 'obj', 'gltf', 'glb'],
             textura: ['jpg', 'jpeg', 'png', 'gif', 'webp']
         };
-        
-        if (!extensionesPorTipo[tipo].includes(ext)) {
+
+        // Validar subcarpeta y tipo una sola vez
+        if (!subcarpetasValidas.includes(subcarpeta)) {
             return res.status(400).json({
-                message: `Extensión .${ext} no válida para tipo ${tipo}. Extensiones aceptadas: ${extensionesPorTipo[tipo].join(', ')}`,
+                message: `subcarpeta inválida. Debe ser: ${subcarpetasValidas.join(', ')}`,
                 data: null
             });
         }
         
-        const [result, error] = await minioService.uploadFileService(
-            req.file.buffer,
-            subcarpeta,
-            tipo,
-            req.file.originalname,
-            req.file.mimetype
-        );
-        
-        if (error) {
-            return res.status(500).json({
-                message: error,
+        if (!tiposValidos.includes(tipo)) {
+            return res.status(400).json({
+                message: `tipo inválido. Debe ser: ${tiposValidos.join(', ')}`,
                 data: null
             });
         }
-        
-        res.status(201).json({
-            message: "Archivo subido exitosamente",
-            data: result
+
+        // Validar todos los archivos antes de subir
+        for (const archivo of archivos) {
+            const nombreArchivo = archivo.originalname;
+            
+            if (caracteresProblematicos.test(nombreArchivo)) {
+                return res.status(400).json({
+                    message: `Archivo "${nombreArchivo}": nombre inválido. Solo se permiten letras, números, guiones, guiones bajos y puntos.`,
+                    data: null
+                });
+            }
+
+            if (nombreArchivo.startsWith('.') || nombreArchivo.startsWith('-')) {
+                return res.status(400).json({
+                    message: `Archivo "${nombreArchivo}": no puede comenzar con punto o guion`,
+                    data: null
+                });
+            }
+
+            if (nombreArchivo.length > 200) {
+                return res.status(400).json({
+                    message: `Archivo "${nombreArchivo}": nombre demasiado largo (máximo 200 caracteres)`,
+                    data: null
+                });
+            }
+            
+            const ext = nombreArchivo.toLowerCase().split('.').pop();
+            if (!extensionesPorTipo[tipo].includes(ext)) {
+                return res.status(400).json({
+                    message: `Archivo "${nombreArchivo}": extensión .${ext} no válida para tipo ${tipo}. Extensiones aceptadas: ${extensionesPorTipo[tipo].join(', ')}`,
+                    data: null
+                });
+            }
+        }
+
+        // Subir todos los archivos
+        const resultados = [];
+        const errores = [];
+
+        for (const archivo of archivos) {
+            const [result, error] = await minioService.uploadFileService(
+                archivo.buffer,
+                subcarpeta,
+                tipo,
+                archivo.originalname,
+                archivo.mimetype
+            );
+
+            if (error) {
+                errores.push({ archivo: archivo.originalname, error });
+            } else {
+                resultados.push({ archivo: archivo.originalname, ...result });
+            }
+        }
+
+        // Si todos fallaron
+        if (errores.length === archivos.length) {
+            return res.status(500).json({ 
+                message: "Todos los archivos fallaron al subir",
+                data: null,
+                errores 
+            });
+        }
+
+        // Si algunos fallaron
+        if (errores.length > 0) {
+            return res.status(207).json({ 
+                message: `${resultados.length} archivo(s) subido(s), ${errores.length} fallaron`,
+                data: resultados,
+                errores 
+            });
+        }
+
+        // Todos exitosos
+        return res.status(201).json({ 
+            message: `${resultados.length} archivo(s) subido(s) exitosamente`,
+            data: resultados 
         });
+        
     } catch (error) {
-        console.error("Error en handleUploadFile:", error);
-        res.status(500).json({
+        console.error('Error en handleUploadFile:', error);
+        return res.status(500).json({
             message: "Error interno del servidor",
             data: null
         });

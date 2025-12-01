@@ -7,7 +7,8 @@ import {
     getVisitasByExhibicionService,
     getEstadisticasService,
     getAnalisisQuizService,
-    updateQuizEstadoService
+    updateQuizEstadoService,
+    getEmbudoConversionService
 } from "../services/visita.service.js";
 
 export async function createVisita(req, res) {
@@ -227,5 +228,40 @@ export async function updateQuizEstado(req, res) {
     } catch (error) {
         console.error("Error en updateQuizEstado:", error);
         res.status(500).json({ message: "Error interno del servidor" });
+    }
+}
+
+/**
+ * GET /api/visita/embudo - Obtener embudo de conversión
+ */
+export async function getEmbudoConversion(req, res) {
+    try {
+        const { desde, hasta } = req.query;
+
+        if (!desde || !hasta) {
+            return res.status(400).json({ 
+                message: "Los parámetros 'desde' y 'hasta' son requeridos" 
+            });
+        }
+
+        const [embudo, error] = await getEmbudoConversionService(desde, hasta);
+
+        if (error) {
+            return res.status(500).json({ 
+                message: error,
+                data: null
+            });
+        }
+
+        res.status(200).json({
+            message: "Embudo de conversión obtenido exitosamente",
+            data: embudo
+        });
+    } catch (error) {
+        console.error("Error en getEmbudoConversion:", error);
+        res.status(500).json({ 
+            message: "Error interno del servidor",
+            data: null
+        });
     }
 }

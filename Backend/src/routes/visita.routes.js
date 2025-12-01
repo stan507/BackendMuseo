@@ -8,7 +8,8 @@ import {
     getVisitasByExhibicion,
     getEstadisticas,
     getAnalisisQuiz,
-    updateQuizEstado
+    updateQuizEstado,
+    getEmbudoConversion
 } from "../controllers/visita.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
@@ -23,6 +24,9 @@ const router = Router();
 
 // GET estadísticas (ANTES de otras rutas para evitar conflictos)
 router.get("/estadisticas", authenticate, getEstadisticas);
+
+// GET embudo de conversión
+router.get("/embudo", authenticate, getEmbudoConversion);
 
 // GET análisis detallado de un quiz
 router.get("/analisis-quiz/:id", authenticate, getAnalisisQuiz);

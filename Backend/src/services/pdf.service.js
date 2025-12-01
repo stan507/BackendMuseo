@@ -248,6 +248,45 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
         }
     });
 
+    // Análisis de rangos horarios
+    const visitasPorHora = {};
+    visitas.forEach(v => {
+        const hora = new Date(v.fecha_visita).getHours();
+        visitasPorHora[hora] = (visitasPorHora[hora] || 0) + 1;
+    });
+
+    // Encontrar rango horario pico
+    let maxVisitas = 0;
+    let rangoHorarioPico = { inicio: 0, fin: 0, visitas: 0, descripcion: 'N/A' };
+    
+    for (let ventana = 1; ventana <= 3; ventana++) {
+        for (let horaInicio = 0; horaInicio <= 23 - ventana; horaInicio++) {
+            let visitasEnVentana = 0;
+            for (let i = 0; i < ventana; i++) {
+                visitasEnVentana += (visitasPorHora[horaInicio + i] || 0);
+            }
+            
+            if (visitasEnVentana > maxVisitas) {
+                maxVisitas = visitasEnVentana;
+                rangoHorarioPico = {
+                    inicio: horaInicio,
+                    fin: horaInicio + ventana,
+                    visitas: visitasEnVentana,
+                    descripcion: `${String(horaInicio).padStart(2, '0')}:00 - ${String(horaInicio + ventana).padStart(2, '0')}:00`
+                };
+            }
+        }
+    }
+
+    // Distribución completa por hora
+    const distribucionHoraria = Object.keys(visitasPorHora)
+        .sort((a, b) => parseInt(a) - parseInt(b))
+        .map(hora => ({
+            hora: parseInt(hora),
+            horaFormato: `${String(hora).padStart(2, '0')}:00`,
+            visitas: visitasPorHora[hora]
+        }));
+
     // Preguntas difíciles
     const preguntasDificiles = {};
     visitas.forEach(v => {
@@ -267,6 +306,8 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
         visitasSinQuiz: totalVisitas - visitasConQuiz,
         visitasPorExhibicion,
         distribucionPuntajes,
+        rangoHorarioPico,
+        distribucionHoraria,
         preguntasDificiles: Object.entries(preguntasDificiles)
             .map(([texto, errores]) => ({ texto, errores }))
             .sort((a, b) => b.errores - a.errores)
@@ -322,6 +363,45 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
         if (Object.keys(stats.visitasPorExhibicion).length > 0) {
             const graficoVisitas = await generarGraficoBarras(stats.visitasPorExhibicion, 'Visitas por Exhibición');
             doc.image(graficoVisitas, { width: 500 });
+            doc.moveDown(2);
+        }
+
+        // Rango Horario Pico
+        if (stats.rangoHorarioPico && stats.rangoHorarioPico.visitas > 0) {
+            doc.fontSize(16).fillColor('#000000').text('HORARIO DE MAYOR AFLUENCIA', { underline: true });
+            doc.moveDown();
+            doc.fontSize(14).fillColor('#D97706');
+            doc.text(stats.rangoHorarioPico.descripcion, { align: 'center' });
+            doc.fontSize(12).fillColor('#000000');
+            doc.text(`${stats.rangoHorarioPico.visitas} visitas registradas en este rango`, { align: 'center' });
+            doc.moveDown(0.5);
+            doc.fontSize(10).fillColor('#666666');
+            doc.text('Este es el periodo con mayor concentración de visitantes', { align: 'center' });
+            doc.fillColor('#000000');
+            doc.moveDown(2);
+        }
+
+        // Distribución Horaria
+        if (stats.distribucionHoraria && stats.distribucionHoraria.length > 0) {
+            doc.fontSize(16).text('DISTRIBUCION DE VISITAS POR HORA', { underline: true });
+            doc.moveDown();
+            doc.fontSize(10);
+            
+            // Crear tabla de distribución horaria
+            const maxVisitasHora = Math.max(...stats.distribucionHoraria.map(h => h.visitas));
+            stats.distribucionHoraria.forEach((hora) => {
+                const esHoraPico = hora.hora >= stats.rangoHorarioPico.inicio && 
+                                   hora.hora < stats.rangoHorarioPico.fin;
+                
+                if (esHoraPico) {
+                    doc.fillColor('#D97706').text(`${hora.horaFormato}: ${hora.visitas} visitas [HORA MAS VISITADA]`, { 
+                        continued: false 
+                    });
+                } else {
+                    doc.fillColor('#000000').text(`${hora.horaFormato}: ${hora.visitas} visitas`);
+                }
+            });
+            doc.fillColor('#000000');
             doc.moveDown(2);
         }
 
@@ -430,9 +510,12 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
                             
                             doc.fillColor(color);
                             doc.fontSize(11);
-                            doc.text(`  ${icono} ${respuesta.texto}`, { continued: true });
+                            // No usar continued:true para evitar superposición de texto
+                            doc.text(`  ${icono} ${respuesta.texto} - ${respuesta.porcentaje}% (${respuesta.cantidad} ${respuesta.cantidad === 1 ? 'respuesta' : 'respuestas'})`, { 
+                                width: 500,
+                                align: 'left'
+                            });
                             doc.fillColor('#000000');
-                            doc.text(` - ${respuesta.porcentaje}% (${respuesta.cantidad} ${respuesta.cantidad === 1 ? 'respuesta' : 'respuestas'})`);
                             doc.moveDown(0.3);
                         });
                         
