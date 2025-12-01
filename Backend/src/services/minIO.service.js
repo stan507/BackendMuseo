@@ -132,22 +132,36 @@ export const listFiles = (prefix) => {
         stream.on('data', (obj) => {
             // Solo añadimos archivos, ignoramos los directorios (que terminan en /)
             if (obj.name && !obj.name.endsWith('/')) {
-                // Devolvemos la ruta/key completa (ej: "helice/fotos/foto1.jpg")
-                files.push(obj.name);
+                // Devolvemos objeto completo con metadatos
+                files.push({
+                    name: obj.name,
+                    size: obj.size || 0,
+                    lastModified: obj.lastModified || new Date()
+                });
             }
         });
 
         // 🚨 CORRECCIÓN DE ERROR 500: Manejo robusto del error del stream
         stream.on('error', (err) => {
             console.error('[Servicio MinIO] Error en listFiles:', err);
+            console.error('[Servicio MinIO] Detalles del error:', {
+                code: err.code,
+                message: err.message,
+                bucket: bucketName,
+                prefix: prefix
+            });
             // Rechaza la promesa con el error real
-            reject(new Error('Fallo la operacion de listado de archivos. Revise la consola de MinIO para detalles.'));
+            reject(new Error(`Error al listar archivos: ${err.message}`));
         });
 
         // Fin del proceso: Devolver la lista.
         stream.on('end', () => {
-            console.log(`[Servicio MinIO] Listado exitoso para el prefijo: ${prefix}. ${files.length} archivos encontrados.`);
-            resolve(files); // Devuelve el array de rutas
+            console.log(`[Servicio MinIO] Listado exitoso para el prefijo: '${prefix}'. ${files.length} archivos encontrados.`);
+            if (files.length === 0) {
+                console.log(`[Servicio MinIO] ⚠️ No se encontraron archivos con el prefijo: '${prefix}'`);
+                console.log(`[Servicio MinIO] Verifica que la estructura sea: ${bucketName}/${prefix}archivo.ext`);
+            }
+            resolve(files); // Devuelve el array de objetos con metadatos
         });
     });
 };

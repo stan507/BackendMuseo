@@ -13,12 +13,24 @@ export default function MinIO() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const tiposArchivo = [
-    { value: 'videos', label: 'Videos' },
-    { value: 'fotos', label: 'Fotos' },
-    { value: 'audios', label: 'Audios' },
-    { value: 'modelo3D', label: 'Modelos 3D' },
-    { value: 'textura', label: 'Texturas' }
+    { value: 'videos', label: 'Videos', extensiones: ['.mp4', '.mpeg', '.mpg', '.mov', '.avi', '.webm'] },
+    { value: 'fotos', label: 'Fotos', extensiones: ['.jpg', '.jpeg', '.png', '.gif', '.webp'] },
+    { value: 'audios', label: 'Audios', extensiones: ['.mp3', '.wav', '.ogg'] },
+    { value: 'modelo3D', label: 'Modelos 3D', extensiones: ['.fbx', '.obj', '.gltf', '.glb'] },
+    { value: 'textura', label: 'Texturas', extensiones: ['.jpg', '.jpeg', '.png', '.gif', '.webp'] }
   ];
+
+  const obtenerExtensionesPermitidas = () => {
+    const tipo = tiposArchivo.find(t => t.value === tipoArchivo);
+    return tipo ? tipo.extensiones : [];
+  };
+
+  const validarExtension = (archivo) => {
+    if (!archivo || !tipoArchivo) return false;
+    const extension = '.' + archivo.name.toLowerCase().split('.').pop();
+    const tipo = tiposArchivo.find(t => t.value === tipoArchivo);
+    return tipo ? tipo.extensiones.includes(extension) : false;
+  };
 
   useEffect(() => {
     cargarExhibiciones();
@@ -52,14 +64,38 @@ export default function MinIO() {
     setLoading(true);
     try {
       const prefix = `${exhibicionSeleccionada}/${tipoArchivo}/`;
+      console.log('🔍 Buscando archivos con prefix:', prefix);
+      
       const response = await api.get('/museo/list-files', {
         params: { prefix }
       });
+      
+      console.log('✅ Archivos recibidos:', response.data.files?.length || 0);
       setArchivos(response.data.files || []);
     } catch (error) {
       console.error('Error al cargar archivos:', error);
       const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
-      alert(`Error al cargar archivos de MinIO: ${errorMsg}`);
+      const statusCode = error.response?.status;
+      
+      let mensajeUsuario = `❌ Error al cargar archivos:\n${errorMsg}`;
+      
+      if (statusCode === 400) {
+        mensajeUsuario = `❌ Petición inválida: ${errorMsg}`;
+      } else if (statusCode === 401) {
+        mensajeUsuario = '❌ No autorizado. Inicia sesión nuevamente.';
+      } else if (statusCode === 500) {
+        mensajeUsuario = `❌ Error del servidor:\n${errorMsg}\n\nVerifica que MinIO esté corriendo y configurado correctamente.`;
+      }
+      
+      alert(mensajeUsuario);
+      console.error('Detalles del error:', {
+        status: statusCode,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          params: error.config?.params
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -73,6 +109,13 @@ export default function MinIO() {
 
     if (!exhibicionSeleccionada || !tipoArchivo) {
       alert('Selecciona una exhibición y tipo de archivo primero');
+      return;
+    }
+
+    // Validar extensión
+    if (!validarExtension(archivoSeleccionado)) {
+      const tipo = tiposArchivo.find(t => t.value === tipoArchivo);
+      alert(`❌ Archivo inválido para ${tipo.label}\n\nExtensiones permitidas: ${tipo.extensiones.join(', ')}`);
       return;
     }
 
@@ -92,13 +135,14 @@ export default function MinIO() {
           setUploadProgress(percentCompleted);
         }
       });
-      alert('Archivo subido exitosamente');
+      alert('✅ Archivo subido exitosamente');
       setArchivoSeleccionado(null);
       setUploadProgress(0);
       cargarArchivos();
     } catch (error) {
       console.error('Error al subir archivo:', error);
-      alert('Error al subir archivo');
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message;
+      alert(`❌ Error al subir archivo:\n${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -192,7 +236,7 @@ export default function MinIO() {
               >
                 <option value="">-- Selecciona una exhibición --</option>
                 {exhibiciones.map((exhib) => (
-                  <option key={exhib.id} value={exhib.nombre_carpeta}>
+                  <option key={exhib.id_exhibicion} value={exhib.id_exhibicion}>
                     {exhib.nombre}
                   </option>
                 ))}
@@ -212,10 +256,15 @@ export default function MinIO() {
                 <option value="">-- Selecciona tipo de archivo --</option>
                 {tiposArchivo.map((tipo) => (
                   <option key={tipo.value} value={tipo.value}>
-                    {tipo.label}
+                    {tipo.label} ({tipo.extensiones.join(', ')})
                   </option>
                 ))}
               </select>
+              {tipoArchivo && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Formatos aceptados: {tiposArchivo.find(t => t.value === tipoArchivo)?.extensiones.join(', ')}
+                </p>
+              )}
             </div>
 
             <div>
