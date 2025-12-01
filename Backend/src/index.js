@@ -1,9 +1,14 @@
 "use strict";
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import router from './routes/index.routes.js'; // 1. Importamos el "mapa" de rutas
 import { PORT } from './config/configEnv.js'; // 2. Importamos el puerto desde .env
 import { connectDB } from './config/configDb.js'; // 3. Importamos la función de conexión a la DB
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = PORT || 3000; // Usa el puerto del .env o el 3000
@@ -16,10 +21,22 @@ app.use(cors({
 })); // Permite peticiones desde frontend
 app.use(express.json()); // Permite a Express entender JSON
 
-// --- Rutas ---
+// --- Servir archivos estáticos del frontend ---
+const frontendPath = path.join(__dirname, '../../Frontend/dist');
+app.use(express.static(frontendPath));
+
+// --- Rutas API ---
 // Le decimos a Express que CUALQUIER petición que
 // empiece con "/api" debe ser manejada por nuestro "mapa" de rutas.
 app.use("/api", router);
+
+// --- Fallback para React Router ---
+// Todas las rutas que NO sean /api/* deben servir el index.html
+app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(frontendPath, 'index.html'));
+    }
+});
 
 /**
  * Función principal para arrancar el servidor
