@@ -75,20 +75,34 @@ export const deleteFile = async (objectName) => {
  */
 export const deleteFileService = async (filePath) => {
     try {
+        console.log(`[MinIO] Intentando eliminar: ${bucketName}/${filePath}`);
+        
         // Verificar si el archivo existe
-        await minioClient.statObject(bucketName, filePath);
+        try {
+            await minioClient.statObject(bucketName, filePath);
+            console.log(`[MinIO] Archivo existe, procediendo a eliminar`);
+        } catch (statError) {
+            if (statError.code === 'NotFound') {
+                console.log(`[MinIO] Archivo no encontrado: ${filePath}`);
+                return [null, "Archivo no encontrado en MinIO"];
+            }
+            throw statError;
+        }
         
         // Eliminar archivo
         await minioClient.removeObject(bucketName, filePath);
         
-        console.log(`[MinIO] Archivo eliminado: ${filePath}`);
+        console.log(`[MinIO] ✅ Archivo eliminado exitosamente: ${filePath}`);
         return [{ message: "Archivo eliminado exitosamente" }, null];
     } catch (error) {
-        if (error.code === 'NotFound') {
-            return [null, "Archivo no encontrado"];
-        }
-        console.error("Error en deleteFileService:", error);
-        return [null, "Error al eliminar el archivo"];
+        console.error("[MinIO] ❌ Error en deleteFileService:", error);
+        console.error("[MinIO] Detalles:", {
+            code: error.code,
+            message: error.message,
+            bucket: bucketName,
+            filePath: filePath
+        });
+        return [null, `Error al eliminar el archivo: ${error.message}`];
     }
 };
 

@@ -43,6 +43,31 @@ export const handleUploadFile = async (req, res) => {
                 data: null
             });
         }
+
+        // Validar nombre de archivo
+        const nombreArchivo = req.file.originalname;
+        const caracteresProblematicos = /[^a-zA-Z0-9._-]/g;
+        
+        if (caracteresProblematicos.test(nombreArchivo)) {
+            return res.status(400).json({
+                message: `Nombre de archivo inválido: "${nombreArchivo}". Solo se permiten letras, números, guiones, guiones bajos y puntos.`,
+                data: null
+            });
+        }
+
+        if (nombreArchivo.startsWith('.') || nombreArchivo.startsWith('-')) {
+            return res.status(400).json({
+                message: "El nombre de archivo no puede comenzar con punto o guion",
+                data: null
+            });
+        }
+
+        if (nombreArchivo.length > 200) {
+            return res.status(400).json({
+                message: "El nombre de archivo es demasiado largo (máximo 200 caracteres)",
+                data: null
+            });
+        }
         
         // Validar subcarpeta
         const subcarpetasValidas = ['huemul', 'helice', 'chemomul', 'cocodrilo'];
@@ -110,18 +135,22 @@ export const handleUploadFile = async (req, res) => {
 // Delete de archivo
 export const handleDeleteFile = async (req, res) => {
     try {
-        const { filePath } = req.body;
+        // Soportar tanto query params como body
+        const objectName = req.query.objectName || req.body.filePath || req.body.objectName;
         
-        if (!filePath) {
+        console.log('🗑️ Solicitud de eliminación:', objectName);
+        
+        if (!objectName) {
             return res.status(400).json({
-                message: "filePath es requerido",
+                message: "objectName es requerido (query param o body)",
                 data: null
             });
         }
         
-        const [result, error] = await minioService.deleteFileService(filePath);
+        const [result, error] = await minioService.deleteFileService(objectName);
         
         if (error) {
+            console.error('❌ Error al eliminar:', error);
             const statusCode = error === "Archivo no encontrado" ? 404 : 500;
             return res.status(statusCode).json({
                 message: error,
@@ -129,14 +158,15 @@ export const handleDeleteFile = async (req, res) => {
             });
         }
         
+        console.log('✅ Archivo eliminado exitosamente:', objectName);
         res.status(200).json({
-            message: result.message,
+            message: result.message || "Archivo eliminado exitosamente",
             data: null
         });
     } catch (error) {
         console.error("Error en handleDeleteFile:", error);
         res.status(500).json({
-            message: "Error interno del servidor",
+            message: `Error interno del servidor: ${error.message}`,
             data: null
         });
     }

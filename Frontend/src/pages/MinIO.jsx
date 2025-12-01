@@ -32,6 +32,50 @@ export default function MinIO() {
     return tipo ? tipo.extensiones.includes(extension) : false;
   };
 
+  const validarNombreArchivo = (nombreArchivo) => {
+    // Caracteres problemáticos para MinIO, Unity y URLs
+    const caracteresProblematicos = /[^a-zA-Z0-9._-]/g;
+    const caracteresEncontrados = nombreArchivo.match(caracteresProblematicos);
+    
+    if (caracteresEncontrados) {
+      return {
+        valido: false,
+        mensaje: `El nombre contiene caracteres no permitidos: ${[...new Set(caracteresEncontrados)].join(', ')}\n\nSolo se permiten: letras, números, guiones (-), guiones bajos (_) y puntos (.)`
+      };
+    }
+
+    // Validar que no empiece con punto o guion
+    if (nombreArchivo.startsWith('.') || nombreArchivo.startsWith('-')) {
+      return {
+        valido: false,
+        mensaje: 'El nombre no puede comenzar con punto (.) o guion (-)'
+      };
+    }
+
+    // Validar longitud
+    if (nombreArchivo.length > 200) {
+      return {
+        valido: false,
+        mensaje: 'El nombre es demasiado largo (máximo 200 caracteres)'
+      };
+    }
+
+    return { valido: true };
+  };
+
+  const sanitizarNombreArchivo = (nombreArchivo) => {
+    // Reemplazar espacios con guiones bajos
+    let nombreLimpio = nombreArchivo.replace(/\s+/g, '_');
+    
+    // Eliminar caracteres problemáticos
+    nombreLimpio = nombreLimpio.replace(/[^a-zA-Z0-9._-]/g, '');
+    
+    // Eliminar múltiples guiones/puntos consecutivos
+    nombreLimpio = nombreLimpio.replace(/[-_.]{2,}/g, '_');
+    
+    return nombreLimpio;
+  };
+
   useEffect(() => {
     cargarExhibiciones();
   }, []);
@@ -119,8 +163,38 @@ export default function MinIO() {
       return;
     }
 
+    // Validar nombre de archivo
+    const validacionNombre = validarNombreArchivo(archivoSeleccionado.name);
+    if (!validacionNombre.valido) {
+      const nombreSanitizado = sanitizarNombreArchivo(archivoSeleccionado.name);
+      const confirmar = window.confirm(
+        `❌ ${validacionNombre.mensaje}\n\n` +
+        `Nombre actual: ${archivoSeleccionado.name}\n` +
+        `Nombre sugerido: ${nombreSanitizado}\n\n` +
+        `¿Deseas subir el archivo con el nombre corregido?`
+      );
+      
+      if (!confirmar) {
+        return;
+      }
+      
+      // Crear nuevo archivo con nombre sanitizado
+      const archivoCorregido = new File([archivoSeleccionado], nombreSanitizado, {
+        type: archivoSeleccionado.type
+      });
+      setArchivoSeleccionado(archivoCorregido);
+      
+      // Continuar con el archivo corregido
+      await subirArchivoConNombre(archivoCorregido);
+      return;
+    }
+
+    await subirArchivoConNombre(archivoSeleccionado);
+  };
+
+  const subirArchivoConNombre = async (archivo) => {
     const formData = new FormData();
-    formData.append('file', archivoSeleccionado);
+    formData.append('file', archivo);
     formData.append('subcarpeta', exhibicionSeleccionada);
     formData.append('tipo', tipoArchivo);
 
@@ -166,15 +240,17 @@ export default function MinIO() {
     }
   };
 
-  const obtenerUrl = async (fileName) => {
+  const verArchivo = async (fileName) => {
     try {
       const response = await api.get('/museo/presigned-url', {
         params: { object: fileName }
       });
-      window.open(response.data.url, '_blank');
+      // Abrir en nueva pestaña para visualizar
+      window.open(response.data.url, '_blank', 'noopener,noreferrer');
     } catch (error) {
       console.error('Error al obtener URL:', error);
-      alert('Error al obtener URL del archivo');
+      const errorMsg = error.response?.data?.error || error.message;
+      alert(`Error al obtener URL del archivo:\n${errorMsg}`);
     }
   };
 
@@ -184,16 +260,26 @@ export default function MinIO() {
         params: { object: fileName }
       });
       
+      // Descargar usando fetch para forzar descarga
+      const urlDescarga = response.data.url;
+      const respuestaArchivo = await fetch(urlDescarga);
+      const blob = await respuestaArchivo.blob();
+      
       // Crear enlace temporal para descargar
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = response.data.url;
+      link.href = url;
       link.download = fileName.split('/').pop();
       document.body.appendChild(link);
       link.click();
+      
+      // Limpiar
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error al descargar archivo:', error);
-      alert('Error al descargar archivo');
+      const errorMsg = error.response?.data?.error || error.message;
+      alert(`Error al descargar archivo:\n${errorMsg}`);
     }
   };
 
@@ -377,11 +463,12 @@ export default function MinIO() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            obtenerUrl(archivo.name);
+                            verArchivo(archivo.name);
                           }}
                           className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                          title="Abrir en nueva pestaña"
                         >
-                          Ver
+                          👁️ Ver
                         </button>
                         <button
                           onClick={(e) => {
@@ -389,8 +476,9 @@ export default function MinIO() {
                             handleDelete(archivo.name);
                           }}
                           className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                          title="Eliminar archivo"
                         >
-                          Eliminar
+                          🗑️ Eliminar
                         </button>
                       </td>
                     </tr>
