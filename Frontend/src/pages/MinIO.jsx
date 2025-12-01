@@ -6,21 +6,32 @@ export default function MinIO() {
   const navigate = useNavigate();
   const [exhibiciones, setExhibiciones] = useState([]);
   const [exhibicionSeleccionada, setExhibicionSeleccionada] = useState('');
+  const [tipoArchivo, setTipoArchivo] = useState('');
   const [archivos, setArchivos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  const tiposArchivo = [
+    { value: 'videos', label: 'Videos' },
+    { value: 'fotos', label: 'Fotos' },
+    { value: 'audios', label: 'Audios' },
+    { value: 'modelo3D', label: 'Modelos 3D' },
+    { value: 'textura', label: 'Texturas' }
+  ];
 
   useEffect(() => {
     cargarExhibiciones();
   }, []);
 
   useEffect(() => {
-    if (exhibicionSeleccionada) {
+    if (exhibicionSeleccionada && tipoArchivo) {
       cargarArchivos();
+    } else {
+      setArchivos([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exhibicionSeleccionada]);
+  }, [exhibicionSeleccionada, tipoArchivo]);
 
   const cargarExhibiciones = async () => {
     try {
@@ -33,15 +44,16 @@ export default function MinIO() {
   };
 
   const cargarArchivos = async () => {
-    if (!exhibicionSeleccionada) {
+    if (!exhibicionSeleccionada || !tipoArchivo) {
       setArchivos([]);
       return;
     }
 
     setLoading(true);
     try {
+      const prefix = `${exhibicionSeleccionada}/${tipoArchivo}/`;
       const response = await api.get('/museo/list-files', {
-        params: { prefix: exhibicionSeleccionada }
+        params: { prefix }
       });
       setArchivos(response.data.files || []);
     } catch (error) {
@@ -59,14 +71,15 @@ export default function MinIO() {
       return;
     }
 
-    if (!exhibicionSeleccionada) {
-      alert('Selecciona una exhibición primero');
+    if (!exhibicionSeleccionada || !tipoArchivo) {
+      alert('Selecciona una exhibición y tipo de archivo primero');
       return;
     }
 
     const formData = new FormData();
     formData.append('file', archivoSeleccionado);
-    formData.append('prefix', exhibicionSeleccionada);
+    formData.append('subcarpeta', exhibicionSeleccionada);
+    formData.append('tipo', tipoArchivo);
 
     setLoading(true);
     setUploadProgress(0);
@@ -112,12 +125,31 @@ export default function MinIO() {
   const obtenerUrl = async (fileName) => {
     try {
       const response = await api.get('/museo/presigned-url', {
-        params: { objectName: fileName }
+        params: { object: fileName }
       });
       window.open(response.data.url, '_blank');
     } catch (error) {
       console.error('Error al obtener URL:', error);
       alert('Error al obtener URL del archivo');
+    }
+  };
+
+  const descargarArchivo = async (fileName) => {
+    try {
+      const response = await api.get('/museo/presigned-url', {
+        params: { object: fileName }
+      });
+      
+      // Crear enlace temporal para descargar
+      const link = document.createElement('a');
+      link.href = response.data.url;
+      link.download = fileName.split('/').pop();
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error al descargar archivo:', error);
+      alert('Error al descargar archivo');
     }
   };
 
@@ -169,12 +201,32 @@ export default function MinIO() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo de Archivo
+              </label>
+              <select
+                value={tipoArchivo}
+                onChange={(e) => setTipoArchivo(e.target.value)}
+                disabled={!exhibicionSeleccionada}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">-- Selecciona tipo de archivo --</option>
+                {tiposArchivo.map((tipo) => (
+                  <option key={tipo.value} value={tipo.value}>
+                    {tipo.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Archivo
               </label>
               <input
                 type="file"
                 onChange={(e) => setArchivoSeleccionado(e.target.files[0])}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                disabled={!exhibicionSeleccionada || !tipoArchivo}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -189,7 +241,7 @@ export default function MinIO() {
 
             <button
               onClick={handleUpload}
-              disabled={loading || !archivoSeleccionado || !exhibicionSeleccionada}
+              disabled={loading || !archivoSeleccionado || !exhibicionSeleccionada || !tipoArchivo}
               className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
             >
               {loading ? 'Subiendo...' : 'Subir Archivo'}
@@ -197,7 +249,12 @@ export default function MinIO() {
             
             {!exhibicionSeleccionada && (
               <p className="text-sm text-gray-500 text-center">
-                Selecciona una exhibición para gestionar sus archivos
+                Selecciona una exhibición y tipo de archivo para comenzar
+              </p>
+            )}
+            {exhibicionSeleccionada && !tipoArchivo && (
+              <p className="text-sm text-gray-500 text-center">
+                Selecciona el tipo de archivo (videos, fotos, etc.)
               </p>
             )}
           </div>
@@ -206,7 +263,14 @@ export default function MinIO() {
         {/* Lista de Archivos */}
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Archivos en MinIO</h2>
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">Archivos en MinIO</h2>
+              {exhibicionSeleccionada && tipoArchivo && (
+                <p className="text-sm text-gray-500 mt-1">
+                  💡 Doble clic en un archivo para descargarlo
+                </p>
+              )}
+            </div>
             <button
               onClick={cargarArchivos}
               disabled={loading}
@@ -218,16 +282,22 @@ export default function MinIO() {
 
           {!exhibicionSeleccionada && (
             <p className="text-gray-500 text-center py-8">
-              Selecciona una exhibición para ver sus archivos
+              Selecciona una exhibición y tipo de archivo para ver los archivos
             </p>
           )}
 
-          {exhibicionSeleccionada && loading && (
-            <p className="text-gray-500">Cargando archivos de {exhibicionSeleccionada}...</p>
+          {exhibicionSeleccionada && !tipoArchivo && (
+            <p className="text-gray-500 text-center py-8">
+              Selecciona un tipo de archivo para continuar
+            </p>
           )}
 
-          {exhibicionSeleccionada && !loading && archivos.length === 0 && (
-            <p className="text-gray-500">No hay archivos en esta exhibición</p>
+          {exhibicionSeleccionada && tipoArchivo && loading && (
+            <p className="text-gray-500">Cargando {tipoArchivo} de {exhibicionSeleccionada}...</p>
+          )}
+
+          {exhibicionSeleccionada && tipoArchivo && !loading && archivos.length === 0 && (
+            <p className="text-gray-500">No hay archivos en {exhibicionSeleccionada}/{tipoArchivo}</p>
           )}
 
           {!loading && archivos.length > 0 && (
@@ -243,7 +313,12 @@ export default function MinIO() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {archivos.map((archivo, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
+                    <tr 
+                      key={idx} 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onDoubleClick={() => descargarArchivo(archivo.name)}
+                      title="Doble clic para descargar"
+                    >
                       <td className="px-6 py-4 text-sm text-gray-900">{archivo.name}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">{formatBytes(archivo.size)}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">
@@ -251,13 +326,19 @@ export default function MinIO() {
                       </td>
                       <td className="px-6 py-4 text-right text-sm space-x-2">
                         <button
-                          onClick={() => obtenerUrl(archivo.name)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            obtenerUrl(archivo.name);
+                          }}
                           className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
                         >
                           Ver
                         </button>
                         <button
-                          onClick={() => handleDelete(archivo.name)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(archivo.name);
+                          }}
                           className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
                         >
                           Eliminar
