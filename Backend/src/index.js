@@ -32,9 +32,11 @@ app.use("/api", router);
 
 // --- Fallback para React Router ---
 // Todas las rutas que NO sean /api/* deben servir el index.html
-app.get('*', (req, res) => {
+app.use((req, res, next) => {
     if (!req.path.startsWith('/api')) {
         res.sendFile(path.join(frontendPath, 'index.html'));
+    } else {
+        next();
     }
 });
 
