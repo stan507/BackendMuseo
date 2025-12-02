@@ -48,11 +48,11 @@ export const registerSchema = Joi.object({
         }),
     
     rol: Joi.string()
-        .valid("admin", "encargado", "anonimo")
+        .valid("admin", "encargado")
         .required()
         .messages({
             "string.base": "El rol debe ser texto.",
-            "any.only": "El rol debe ser: admin, encargado o anonimo.",
+            "any.only": "El rol debe ser: admin o encargado.",
             "any.required": "El rol es requerido.",
         }),
 })
@@ -104,11 +104,11 @@ export const updateUsuarioSchema = Joi.object({
         }),
     
     rol: Joi.string()
-        .valid("admin", "encargado", "anonimo")
+        .valid("admin", "encargado")
         .optional()
         .messages({
             "string.base": "El rol debe ser texto.",
-            "any.only": "El rol debe ser: admin, encargado o anonimo.",
+            "any.only": "El rol debe ser: admin o encargado.",
         }),
 })
 .min(1)

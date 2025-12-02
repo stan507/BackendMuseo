@@ -125,30 +125,20 @@ export default function Quizzes() {
       setQuizToDelete(null);
       cargarQuizzesPorExhibicion();
     } catch (error) {
-      console.error('Error al eliminar:', error);
-      alert('Error al eliminar el quiz');
+      alert(error.response?.data?.message || 'Error al eliminar el quiz. Verifica que no sea el único activo.');
     }
   };
 
   const marcarComoActivo = async (quiz) => {
-    console.log('Marcando como activo:', quiz.id_quizz);
-    
     if (quiz.es_activo) {
       return;
     }
 
     try {
-      console.log('Llamando a PATCH /quizz/' + quiz.id_quizz + '/activar');
-      const response = await api.patch(`/quizz/${quiz.id_quizz}/activar`);
-      console.log('Respuesta del servidor:', response.data);
-      
-      console.log('Recargando lista de quizzes...');
+      await api.patch(`/quizz/${quiz.id_quizz}/activar`);
       await cargarQuizzesPorExhibicion();
-      console.log('Lista recargada');
     } catch (error) {
-      console.error('Error al marcar como activo:', error);
-      console.error('Detalles:', error.response?.data);
-      alert('Error al marcar el quiz como activo');
+      alert(error.response?.data?.message || 'Error al marcar el quiz como activo');
     }
   };
 
@@ -181,7 +171,7 @@ export default function Quizzes() {
     
     // Mismas validaciones que crear
     if (!nuevoQuiz.titulo.trim()) {
-      alert('El título es obligatorio');
+      alert('Error: El título del quiz es obligatorio');
       return;
     }
     
@@ -200,7 +190,7 @@ export default function Quizzes() {
       const respuestasConTexto = pregunta.respuestas.filter(r => r.texto_respuesta.trim());
       
       if (respuestasConTexto.length < 2) {
-        alert(`La pregunta ${i + 1} debe tener al menos 2 respuestas con texto`);
+        alert(`Error en pregunta ${i + 1}: Debe tener al menos 2 respuestas con texto`);
         return;
       }
 
@@ -352,7 +342,7 @@ export default function Quizzes() {
     
     // Validaciones
     if (!nuevoQuiz.titulo.trim()) {
-      alert('El título es obligatorio');
+      alert('Error: El título del quiz es obligatorio');
       return;
     }
     
@@ -372,7 +362,7 @@ export default function Quizzes() {
       const respuestasConTexto = pregunta.respuestas.filter(r => r.texto_respuesta.trim());
       
       if (respuestasConTexto.length < 2) {
-        alert(`La pregunta ${i + 1} debe tener al menos 2 respuestas con texto`);
+        alert(`Error en pregunta ${i + 1}: Debe tener al menos 2 respuestas con texto`);
         return;
       }
 
@@ -413,8 +403,6 @@ export default function Quizzes() {
         titulo: nuevoQuiz.titulo,
         preguntas: preguntasFormateadas
       };
-
-      console.log('Payload a enviar:', JSON.stringify(payload, null, 2));
       
       // Verificar que cada pregunta tenga exactamente 1 respuesta correcta
       await api.post('/quizz', payload);

@@ -40,7 +40,7 @@ export default function Exhibiciones() {
       setFormData({ nombre: '', relato_escrito: '' });
       cargarExhibiciones();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al actualizar exhibición');
+      alert(error.response?.data?.message || 'Error al actualizar la exhibición. Verifica que todos los campos estén correctos.');
     }
   };
 

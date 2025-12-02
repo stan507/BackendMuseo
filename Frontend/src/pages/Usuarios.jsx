@@ -13,7 +13,7 @@ export default function Usuarios() {
     apellido: '',
     correo: '',
     contrasena: '',
-    rol: 'visitante'
+    rol: 'admin'
   });
 
   useEffect(() => {
@@ -29,20 +29,27 @@ export default function Usuarios() {
       const usuariosRegistrados = usuarios.filter(user => user.correo !== null && user.correo !== undefined);
       setUsuarios(usuariosRegistrados);
     } catch (error) {
-      console.error('Error al cargar usuarios:', error);
+      alert('Error al cargar la lista de usuarios. Verifica tu conexión.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
+    // Verificar que no se elimine a sí mismo
+    const currentUser = JSON.parse(localStorage.getItem('user'));
+    if (currentUser && currentUser.id_usuario === id) {
+      alert('No puedes eliminar tu propia cuenta mientras estás conectado.');
+      return;
+    }
+
     if (!window.confirm('¿Estás seguro de eliminar este usuario?')) return;
     
     try {
       await api.delete(`/usuario/${id}`);
       cargarUsuarios();
-    } catch {
-      alert('Error al eliminar usuario');
+    } catch (error) {
+      alert(error.response?.data?.message || 'Error al eliminar el usuario. Verifica que no sea el administrador principal.');
     }
   };
 
@@ -50,8 +57,9 @@ export default function Usuarios() {
     e.preventDefault();
     try {
       if (editingUser) {
-        // Editar
+        // Editar - no permitir cambiar correo
         const dataToSend = { ...formData };
+        delete dataToSend.correo; // No enviar correo en edición
         if (!dataToSend.contrasena) delete dataToSend.contrasena;
         await api.put(`/usuario/${editingUser.id_usuario}`, dataToSend);
       } else {
@@ -60,16 +68,18 @@ export default function Usuarios() {
       }
       setShowModal(false);
       setEditingUser(null);
-      setFormData({ nombre: '', apellido: '', correo: '', contrasena: '', rol: 'visitante' });
+      setFormData({ nombre: '', apellido: '', correo: '', contrasena: '', rol: 'admin' });
       cargarUsuarios();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al crear usuario');
+      const mensaje = error.response?.data?.message || 
+        (editingUser ? 'Error al actualizar el usuario' : 'Error al crear el usuario');
+      alert(mensaje);
     }
   };
 
   const openCreateModal = () => {
     setEditingUser(null);
-    setFormData({ nombre: '', apellido: '', correo: '', contrasena: '', rol: 'visitante' });
+    setFormData({ nombre: '', apellido: '', correo: '', contrasena: '', rol: 'admin' });
     setShowModal(true);
   };
 
@@ -220,7 +230,6 @@ export default function Usuarios() {
                   onChange={(e) => setFormData({...formData, rol: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="visitante">Visitante</option>
                   <option value="encargado">Encargado de Museo</option>
                   <option value="admin">Admin</option>
                 </select>

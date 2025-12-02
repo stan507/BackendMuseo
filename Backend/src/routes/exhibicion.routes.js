@@ -3,22 +3,24 @@ import { Router } from "express";
 import * as RelatoController from "../controllers/exhibicion.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { getSchema, getByNameSchema, updateSchema } from "../validations/exhibicion.validation.js";
-import { authenticate, authenticateAdmin } from "../middlewares/auth.middleware.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
+import { authorize } from "../middlewares/authorization.middleware.js";
 
 const router = Router();
 
-// GET todas las exhibiciones - protegido
+// GET todas las exhibiciones - cualquier autenticado
 router.get("/", authenticate, RelatoController.getAllExhibiciones);
 
-// GET por ID - protegido (Unity o Admin)
+// GET por ID - cualquier autenticado
 router.get("/:idExhibicion", authenticate, validate(getSchema, 'params'), RelatoController.obtenerExhibicion);
 
-// GET por nombre - protegido (Unity o Admin)
+// GET por nombre - cualquier autenticado
 router.get("/nombre/:nombre", authenticate, validate(getByNameSchema, 'params'), RelatoController.obtenerExhibicionPorNombre);
 
-// PUT - solo Admin
+// PUT - solo admin y encargado
 router.put("/:idExhibicion", 
-    authenticateAdmin,
+    authenticate,
+    authorize("admin", "encargado"),
     validate(getSchema, 'params'), 
     validate(updateSchema, 'body'), 
     RelatoController.actualizarExhibicion

@@ -93,7 +93,7 @@ export async function createQuizz(req, res) {
         const [quizz, error] = await createQuizzService(id_usuario, id_exhibicion, titulo, preguntas);
 
         if (error) {
-            return res.status(500).json({
+            return res.status(400).json({
                 message: error,
                 data: null
             });
@@ -105,8 +105,9 @@ export async function createQuizz(req, res) {
         });
     } catch (error) {
         console.error("Error en createQuizz:", error);
+        console.error("Stack trace:", error.stack);
         res.status(500).json({
-            message: "Error interno del servidor",
+            message: "Error al crear el quiz: " + error.message,
             data: null
         });
     }
