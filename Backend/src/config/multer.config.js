@@ -23,11 +23,10 @@ const fileFilter = (req, file, cb) => {
         'audio/mpeg': ['.mp3'],
         'audio/wav': ['.wav'],
         'audio/ogg': ['.ogg'],
-        // Modelos 3D
-        'application/octet-stream': ['.fbx', '.obj', '.gltf', '.glb'],
+        // Modelos 3D (solo glTF 2.0 compatible con glTFast)
+        'application/octet-stream': ['.gltf', '.glb', '.bin'],
         'model/gltf-binary': ['.glb'],
-        'model/gltf+json': ['.gltf'],
-        'text/plain': ['.obj']
+        'model/gltf+json': ['.gltf']
     };
     
     const allowedMimes = Object.keys(allowedExtensions);

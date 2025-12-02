@@ -16,7 +16,7 @@ export default function MinIO() {
     { value: 'videos', label: 'Videos', extensiones: ['.mp4', '.mpeg', '.mpg', '.mov', '.avi', '.webm'] },
     { value: 'fotos', label: 'Fotos', extensiones: ['.jpg', '.jpeg', '.png', '.gif', '.webp'] },
     { value: 'audios', label: 'Audios', extensiones: ['.mp3', '.wav', '.ogg'] },
-    { value: 'modelo3D', label: 'Modelos 3D', extensiones: ['.fbx', '.obj', '.gltf', '.glb'] },
+    { value: 'modelo3D', label: 'Modelos 3D', extensiones: ['.gltf', '.glb', '.bin'] },
     { value: 'textura', label: 'Texturas', extensiones: ['.jpg', '.jpeg', '.png', '.gif', '.webp'] }
   ];
 

@@ -55,7 +55,7 @@ export const handleUploadFile = async (req, res) => {
             fotos: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
             videos: ['mp4', 'mpeg', 'mpg', 'mov', 'avi', 'webm'],
             audios: ['mp3', 'wav', 'ogg'],
-            modelo3D: ['fbx', 'obj', 'gltf', 'glb'],
+            modelo3D: ['gltf', 'glb', 'bin'],
             textura: ['jpg', 'jpeg', 'png', 'gif', 'webp']
         };
 
