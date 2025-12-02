@@ -242,9 +242,9 @@ export async function seedDatabase() {
         if (visitaCount === 0 && admin) {
             console.log("Insertando visitas de ejemplo con escenarios de quiz y horarios variados...");
             
-            // Obtener los quizzes para simular respuestas realistas
-            const quizzHuemul = await quizzRepo.findOne({ where: { id_exhibicion: "huemul" }, relations: ["preguntas", "preguntas.respuestas"] });
-            const quizzHelice = await quizzRepo.findOne({ where: { id_exhibicion: "helice" }, relations: ["preguntas", "preguntas.respuestas"] });
+            // Obtener los quizzes para las visitas
+            const quizzHuemul = await quizzRepo.findOne({ where: { id_exhibicion: "huemul" } });
+            const quizzHelice = await quizzRepo.findOne({ where: { id_exhibicion: "helice" } });
             
             // Función auxiliar para crear fecha con hora específica (hoy con hora personalizada)
             const crearFechaConHora = (hora, minutos = 0) => {
