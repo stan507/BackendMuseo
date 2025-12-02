@@ -263,15 +263,8 @@ export async function seedDatabase() {
                 fecha_visita: crearFechaConHora(10, 15),
                 duracion_segundos: 420,
                 quiz_iniciado: true,
-                puntaje_quiz: quizzHuemul ? quizzHuemul.cant_preguntas : 3,
-                respuestas_quiz: quizzHuemul ? quizzHuemul.preguntas.map((pregunta, idx) => ({
-                    id_pregunta: pregunta.id_pregunta,
-                    texto_pregunta: pregunta.texto,
-                    id_respuesta_seleccionada: pregunta.respuestas.find(r => r.es_correcta)?.id_respuesta,
-                    texto_respuesta_seleccionada: pregunta.respuestas.find(r => r.es_correcta)?.texto,
-                    es_correcta: true,
-                    tiempo_respuesta_segundos: 15 + idx * 5
-                })) : []
+                puntaje_quiz: 3,
+                respuestas_quiz: []
             });
 
             visitasAInsertar.push({
