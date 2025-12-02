@@ -8,21 +8,14 @@ const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
     // Mapeo de tipos por extensión
     const allowedExtensions = {
-        // Imágenes
+        // Imágenes (solo formatos compatibles con Unity)
         'image/jpeg': ['.jpg', '.jpeg'],
         'image/png': ['.png'],
-        'image/gif': ['.gif'],
-        'image/webp': ['.webp'],
-        // Videos
+        // Videos (solo formatos multiplataforma con Unity VideoPlayer)
         'video/mp4': ['.mp4'],
-        'video/mpeg': ['.mpeg', '.mpg'],
-        'video/quicktime': ['.mov'],
-        'video/x-msvideo': ['.avi'],
         'video/webm': ['.webm'],
-        // Audio
+        // Audio (solo MP3 compatible con Unity AudioType.MPEG)
         'audio/mpeg': ['.mp3'],
-        'audio/wav': ['.wav'],
-        'audio/ogg': ['.ogg'],
         // Modelos 3D (solo glTF 2.0 compatible con glTFast)
         'application/octet-stream': ['.gltf', '.glb', '.bin'],
         'model/gltf-binary': ['.glb'],

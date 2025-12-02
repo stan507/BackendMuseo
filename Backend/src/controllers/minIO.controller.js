@@ -52,11 +52,11 @@ export const handleUploadFile = async (req, res) => {
         const subcarpetasValidas = ['huemul', 'helice', 'chemomul', 'cocodrilo'];
         const tiposValidos = ['videos', 'fotos', 'audios', 'modelo3D', 'textura'];
         const extensionesPorTipo = {
-            fotos: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-            videos: ['mp4', 'mpeg', 'mpg', 'mov', 'avi', 'webm'],
-            audios: ['mp3', 'wav', 'ogg'],
+            fotos: ['jpg', 'jpeg', 'png'],
+            videos: ['mp4', 'webm'],
+            audios: ['mp3'],
             modelo3D: ['gltf', 'glb', 'bin'],
-            textura: ['jpg', 'jpeg', 'png', 'gif', 'webp']
+            textura: ['jpg', 'jpeg', 'png']
         };
 
         // Validar subcarpeta y tipo una sola vez

@@ -13,11 +13,11 @@ export default function MinIO() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const tiposArchivo = [
-    { value: 'videos', label: 'Videos', extensiones: ['.mp4', '.mpeg', '.mpg', '.mov', '.avi', '.webm'] },
-    { value: 'fotos', label: 'Fotos', extensiones: ['.jpg', '.jpeg', '.png', '.gif', '.webp'] },
-    { value: 'audios', label: 'Audios', extensiones: ['.mp3', '.wav', '.ogg'] },
+    { value: 'videos', label: 'Videos', extensiones: ['.mp4', '.webm'] },
+    { value: 'fotos', label: 'Fotos', extensiones: ['.jpg', '.jpeg', '.png'] },
+    { value: 'audios', label: 'Audios', extensiones: ['.mp3'] },
     { value: 'modelo3D', label: 'Modelos 3D', extensiones: ['.gltf', '.glb', '.bin'] },
-    { value: 'textura', label: 'Texturas', extensiones: ['.jpg', '.jpeg', '.png', '.gif', '.webp'] }
+    { value: 'textura', label: 'Texturas', extensiones: ['.jpg', '.jpeg', '.png'] }
   ];
 
   const obtenerExtensionesPermitidas = () => {
