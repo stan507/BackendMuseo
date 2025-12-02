@@ -24,8 +24,8 @@ export default function Exhibiciones() {
       // Ordenar por id_exhibicion alfabéticamente para mantener orden consistente
       const ordenadas = data.sort((a, b) => a.id_exhibicion.localeCompare(b.id_exhibicion));
       setExhibiciones(ordenadas);
-    } catch (error) {
-      console.error('Error al cargar exhibiciones:', error);
+    } catch {
+      // Error al cargar exhibiciones
     } finally {
       setLoading(false);
     }
@@ -40,7 +40,6 @@ export default function Exhibiciones() {
       setFormData({ nombre: '', relato_escrito: '' });
       cargarExhibiciones();
     } catch (error) {
-      console.error('Error:', error);
       alert(error.response?.data?.message || 'Error al actualizar exhibición');
     }
   };

@@ -41,8 +41,7 @@ export default function Usuarios() {
     try {
       await api.delete(`/usuario/${id}`);
       cargarUsuarios();
-    } catch (error) {
-      console.error('Error al eliminar:', error);
+    } catch {
       alert('Error al eliminar usuario');
     }
   };
@@ -64,8 +63,7 @@ export default function Usuarios() {
       setFormData({ nombre: '', apellido: '', correo: '', contrasena: '', rol: 'visitante' });
       cargarUsuarios();
     } catch (error) {
-      console.error('Error:', error);
-      alert(error.response?.data?.message || 'Error al guardar usuario');
+      alert(error.response?.data?.message || 'Error al crear usuario');
     }
   };
 

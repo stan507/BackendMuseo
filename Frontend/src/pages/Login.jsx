@@ -28,13 +28,18 @@ export default function Login() {
 
     try {
       if (isLogin) {
-        await authService.login(formData.correo, formData.contrasena);
+        const result = await authService.login(formData.correo, formData.contrasena);
+        if (result) {
+          navigate('/dashboard');
+        }
       } else {
-        await authService.register(formData);
+        const result = await authService.register(formData);
+        if (result) {
+          navigate('/dashboard');
+        }
       }
-      navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al autenticar');
+      setError(err.response?.data?.message || err.message || 'Error al autenticar');
     } finally {
       setLoading(false);
     }

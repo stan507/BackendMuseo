@@ -12,7 +12,7 @@ export const Quizz = new EntitySchema({
         },
         id_usuario: {
             type: "uuid",
-            nullable: false,
+            nullable: true,
         },
         id_exhibicion: {
             type: "varchar",
@@ -44,7 +44,7 @@ export const Quizz = new EntitySchema({
             type: "many-to-one",
             target: "Usuario",
             joinColumn: { name: "id_usuario" },
-            onDelete: "CASCADE",
+            onDelete: "SET NULL",
         },
         exhibicion: {
             type: "many-to-one",

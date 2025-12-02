@@ -20,10 +20,12 @@ const respuestaSchema = Joi.object({
         .min(1)
         .max(200)
         .required()
+        .pattern(/^(?!.*\b(insert|update|delete|drop|create|alter|select|union|exec|execute)\b)/i)
         .messages({
             "string.base": "El texto de la respuesta debe ser texto",
             "string.min": "El texto debe tener al menos 1 carácter",
             "string.max": "El texto no debe exceder 200 caracteres",
+            "string.pattern.base": "Texto no permitido",
             "any.required": "El texto de la respuesta es requerido"
         }),
     es_correcta: Joi.boolean()
@@ -40,20 +42,24 @@ const preguntaSchema = Joi.object({
         .min(1)
         .max(200)
         .required()
+        .pattern(/^(?!.*\b(insert|update|delete|drop|create|alter|select|union|exec|execute)\b)/i)
         .messages({
             "string.base": "El título debe ser texto",
             "string.min": "El título debe tener al menos 1 carácter",
             "string.max": "El título no debe exceder 200 caracteres",
+            "string.pattern.base": "Texto no permitido",
             "any.required": "El título es requerido"
         }),
     texto: Joi.string()
         .min(1)
         .max(1000)
         .required()
+        .pattern(/^(?!.*\b(insert|update|delete|drop|create|alter|select|union|exec|execute)\b)/i)
         .messages({
             "string.base": "El texto debe ser texto",
             "string.min": "El texto debe tener al menos 1 carácter",
             "string.max": "El texto no debe exceder 1000 caracteres",
+            "string.pattern.base": "Texto no permitido",
             "any.required": "El texto de la pregunta es requerido"
         }),
     respuestas: Joi.array()
@@ -99,10 +105,12 @@ export const createQuizzSchema = Joi.object({
         .min(1)
         .max(200)
         .required()
+        .pattern(/^(?!.*\b(insert|update|delete|drop|create|alter|select|union|exec|execute)\b)/i)
         .messages({
             "string.base": "El título debe ser texto",
             "string.min": "El título debe tener al menos 1 carácter",
             "string.max": "El título no debe exceder 200 caracteres",
+            "string.pattern.base": "Texto no permitido",
             "any.required": "El título es requerido"
         }),
     preguntas: Joi.array()
@@ -134,10 +142,12 @@ export const updateQuizzSchema = Joi.object({
         .min(1)
         .max(200)
         .required()
+        .pattern(/^(?!.*\b(insert|update|delete|drop|create|alter|select|union|exec|execute)\b)/i)
         .messages({
             "string.base": "El título debe ser texto",
             "string.min": "El título debe tener al menos 1 caracter",
             "string.max": "El título no debe exceder 200 caracteres",
+            "string.pattern.base": "Texto no permitido",
             "any.required": "El título es requerido"
         }),
     preguntas: Joi.array()

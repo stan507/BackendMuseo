@@ -93,8 +93,7 @@ export default function MinIO() {
     try {
       const response = await api.get('/exhibicion');
       setExhibiciones(response.data.data || []);
-    } catch (error) {
-      console.error('Error al cargar exhibiciones:', error);
+    } catch {
       alert('Error al cargar exhibiciones');
     }
   };
@@ -108,16 +107,13 @@ export default function MinIO() {
     setLoading(true);
     try {
       const prefix = `${exhibicionSeleccionada}/${tipoArchivo}/`;
-      console.log('🔍 Buscando archivos con prefix:', prefix);
       
       const response = await api.get('/museo/list-files', {
         params: { prefix }
       });
       
-      console.log('✅ Archivos recibidos:', response.data.files?.length || 0);
       setArchivos(response.data.files || []);
     } catch (error) {
-      console.error('Error al cargar archivos:', error);
       const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
       const statusCode = error.response?.status;
       
@@ -132,14 +128,6 @@ export default function MinIO() {
       }
       
       alert(mensajeUsuario);
-      console.error('Detalles del error:', {
-        status: statusCode,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          params: error.config?.params
-        }
-      });
     } finally {
       setLoading(false);
     }
@@ -234,7 +222,6 @@ export default function MinIO() {
       setUploadProgress(0);
       cargarArchivos();
     } catch (error) {
-      console.error('Error al subir archivos:', error);
       const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message;
       alert(`❌ Error al subir archivos:\n${errorMsg}`);
     } finally {
@@ -253,7 +240,6 @@ export default function MinIO() {
       alert('Archivo eliminado');
       cargarArchivos();
     } catch (error) {
-      console.error('Error al eliminar:', error);
       alert('Error al eliminar archivo');
     } finally {
       setLoading(false);

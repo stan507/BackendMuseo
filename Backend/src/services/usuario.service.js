@@ -145,6 +145,11 @@ export async function deleteUsuarioService(id_usuario) {
             return [null, "Usuario no encontrado"];
         }
 
+        // Proteger al administrador principal
+        if (usuario.correo === "admin@museo.cl") {
+            return [null, "No se puede eliminar el administrador principal del sistema"];
+        }
+
         await usuarioRepo.delete({ id_usuario });
 
         return [{ message: "Usuario eliminado exitosamente" }, null];

@@ -134,7 +134,6 @@ export default function Quizzes() {
     console.log('Marcando como activo:', quiz.id_quizz);
     
     if (quiz.es_activo) {
-      console.log('Quiz ya está activo');
       return;
     }
 
@@ -418,13 +417,7 @@ export default function Quizzes() {
       console.log('Payload a enviar:', JSON.stringify(payload, null, 2));
       
       // Verificar que cada pregunta tenga exactamente 1 respuesta correcta
-      payload.preguntas.forEach((pregunta, idx) => {
-        const correctas = pregunta.respuestas.filter(r => r.es_correcta).length;
-        console.log(`Pregunta ${idx + 1}: ${pregunta.respuestas.length} respuestas, ${correctas} correcta(s)`);
-      });
-
-      const response = await api.post('/quizz', payload);
-      console.log('Quiz creado exitosamente:', response.data);
+      await api.post('/quizz', payload);
       
       // Resetear formulario
       setNuevoQuiz({

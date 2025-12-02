@@ -51,8 +51,7 @@ export default function Informes() {
         // El backend puede devolver response.data directamente o response.data.data
         const data = Array.isArray(response.data) ? response.data : (response.data?.data || []);
         setQuizzes(data);
-      } catch (error) {
-        console.error('Error al cargar quizzes:', error);
+      } catch {
         setQuizzes([]); // Asegurar que sea array vacío en caso de error
       }
     };
@@ -76,8 +75,7 @@ export default function Informes() {
       });
 
       setEstadisticas(response.data.data);
-    } catch (error) {
-      console.error('Error al cargar estadísticas:', error);
+    } catch {
       alert('Error al cargar estadísticas');
     } finally {
       setLoading(false);
@@ -95,8 +93,7 @@ export default function Informes() {
     try {
       const response = await api.get(`/visita/analisis-quiz/${idQuiz}`);
       setAnalisisQuiz(response.data.data);
-    } catch (error) {
-      console.error('Error al cargar análisis del quiz:', error);
+    } catch {
       alert('Error al cargar análisis del quiz');
     } finally {
       setLoading(false);
@@ -131,8 +128,7 @@ export default function Informes() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error al descargar PDF:', error);
+    } catch {
       alert('Error al generar el PDF');
     } finally {
       setLoading(false);
