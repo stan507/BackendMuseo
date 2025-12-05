@@ -216,29 +216,24 @@ export async function getEstadisticasService(desde, hasta) {
             visitasPorHora[hora] = (visitasPorHora[hora] || 0) + 1;
         });
 
-        // Encontrar el rango horario pico (2 horas consecutivas con más visitas)
+        // Encontrar la hora individual con más visitas (hora punta)
         let maxVisitas = 0;
-        let rangoHorarioPico = { inicio: 0, fin: 0, visitas: 0 };
+        let horaPunta = 0;
         
-        // Buscar ventanas de 1, 2 y 3 horas
-        for (let ventana = 1; ventana <= 3; ventana++) {
-            for (let horaInicio = 0; horaInicio <= 23 - ventana; horaInicio++) {
-                let visitasEnVentana = 0;
-                for (let i = 0; i < ventana; i++) {
-                    visitasEnVentana += (visitasPorHora[horaInicio + i] || 0);
-                }
-                
-                if (visitasEnVentana > maxVisitas) {
-                    maxVisitas = visitasEnVentana;
-                    rangoHorarioPico = {
-                        inicio: horaInicio,
-                        fin: horaInicio + ventana,
-                        visitas: visitasEnVentana,
-                        descripcion: `${String(horaInicio).padStart(2, '0')}:00 - ${String(horaInicio + ventana).padStart(2, '0')}:00`
-                    };
-                }
+        Object.keys(visitasPorHora).forEach(hora => {
+            if (visitasPorHora[hora] > maxVisitas) {
+                maxVisitas = visitasPorHora[hora];
+                horaPunta = parseInt(hora);
             }
-        }
+        });
+        
+        // Crear rango de 1 hora para la hora punta
+        const rangoHorarioPico = {
+            inicio: horaPunta,
+            fin: horaPunta + 1,
+            visitas: maxVisitas,
+            descripcion: `${String(horaPunta).padStart(2, '0')}:00 - ${String(horaPunta + 1).padStart(2, '0')}:00`
+        };
 
         // Distribución completa por hora
         const distribucionHoraria = Object.keys(visitasPorHora)
@@ -521,7 +516,7 @@ export async function getAnalisisQuizService(id_quiz) {
                 total_respuestas: totalRespuestas,
                 respuestas: respuestasConPorcentaje.sort((a, b) => b.porcentaje - a.porcentaje)
             };
-        });
+        }).filter(pregunta => pregunta.total_respuestas > 0); // Filtrar preguntas sin respuestas
 
         return [{
             quiz: {

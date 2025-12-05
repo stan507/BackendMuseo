@@ -501,10 +501,10 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
                     doc.fontSize(16).text(analisis.quiz.titulo, { align: 'center' });
                     doc.moveDown(0.5);
                     doc.fontSize(12).text(`Exhibición: ${analisis.quiz.exhibicion}`, { align: 'center' });
-                    doc.text(`Total de Preguntas: ${analisis.quiz.cant_preguntas} | Participantes: ${analisis.total_participantes}`, { align: 'center' });
+                    doc.text(`Total de Preguntas con Respuestas: ${analisis.analisis_preguntas.length} | Participantes: ${analisis.total_participantes}`, { align: 'center' });
                     doc.moveDown(2);
                     
-                    // Análisis de cada pregunta
+                    // Análisis de cada pregunta (solo las que tienen respuestas)
                     analisis.analisis_preguntas.forEach((pregunta, idx) => {
                         // Verificar si necesitamos una nueva página
                         if (doc.y > 650) {
@@ -519,12 +519,11 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
                         
                         // Mostrar cada respuesta con su porcentaje
                         pregunta.respuestas.forEach((respuesta) => {
-                            const icono = respuesta.es_correcta ? '✓' : '○';
+                            const icono = respuesta.es_correcta ? '[CORRECTA]' : '[INCORRECTA]';
                             const color = respuesta.es_correcta ? '#059669' : '#6B7280';
                             
                             doc.fillColor(color);
                             doc.fontSize(11);
-                            // No usar continued:true para evitar superposición de texto
                             doc.text(`  ${icono} ${respuesta.texto} - ${respuesta.porcentaje}% (${respuesta.cantidad} ${respuesta.cantidad === 1 ? 'respuesta' : 'respuestas'})`, { 
                                 width: 500,
                                 align: 'left'

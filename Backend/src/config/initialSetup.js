@@ -263,11 +263,12 @@ export async function seedDatabase() {
 
             const visitasAInsertar = [];
 
+            // Día 1: Alta concentración a las 14:00 (hora punta)
             if (preguntasHuemul.length >= 3) {
                 visitasAInsertar.push({
                     id_usuario: admin.id_usuario,
                     id_exhibicion: "huemul",
-                    fecha_visita: crearFecha(25, 10, 15),
+                    fecha_visita: crearFecha(1, 14, 10),
                     duracion_segundos: 420,
                     quiz_iniciado: true,
                     puntaje_quiz: 3,
@@ -278,55 +279,58 @@ export async function seedDatabase() {
                     ]
                 });
             }
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(25, 11, 30),
-                duracion_segundos: 300,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
+            
+            if (preguntasCocodrilo.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "cocodrilo",
+                    fecha_visita: crearFecha(1, 14, 20),
+                    duracion_segundos: 280,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 2,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasCocodrilo[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasCocodrilo[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
+                    ]
+                });
+            }
+            
             if (preguntasChemamull.length >= 2) {
                 visitasAInsertar.push({
                     id_usuario: admin.id_usuario,
                     id_exhibicion: "chemomul",
-                    fecha_visita: crearFecha(24, 14, 20),
+                    fecha_visita: crearFecha(1, 14, 35),
                     duracion_segundos: 360,
                     quiz_iniciado: true,
                     puntaje_quiz: 1,
                     respuestas_quiz: [
-                        {
-                            id_pregunta: preguntasChemamull[0].id_pregunta,
-                            id_respuesta_seleccionada: 1,
-                            es_correcta: true
-                        },
-                        {
-                            id_pregunta: preguntasChemamull[1].id_pregunta,
-                            id_respuesta_seleccionada: 2,
-                            es_correcta: false
-                        }
+                        { id_pregunta: preguntasChemamull[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasChemamull[1].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false }
                     ]
                 });
             }
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(24, 15, 45),
-                duracion_segundos: 280,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
+            
+            if (preguntasHelice.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "helice",
+                    fecha_visita: crearFecha(1, 14, 45),
+                    duracion_segundos: 300,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 2,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasHelice[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasHelice[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
+                    ]
+                });
+            }
+            
+            // Más visitas a las 14:00
             if (preguntasHuemul.length >= 3) {
                 visitasAInsertar.push({
                     id_usuario: admin.id_usuario,
                     id_exhibicion: "huemul",
-                    fecha_visita: crearFecha(23, 10, 30),
+                    fecha_visita: crearFecha(1, 14, 50),
                     duracion_segundos: 450,
                     quiz_iniciado: true,
                     puntaje_quiz: 2,
@@ -338,482 +342,90 @@ export async function seedDatabase() {
                 });
             }
 
-            if (preguntasHelice.length >= 2) {
-                visitasAInsertar.push({
-                    id_usuario: admin.id_usuario,
-                    id_exhibicion: "helice",
-                    fecha_visita: crearFecha(23, 14, 50),
-                    duracion_segundos: 380,
-                    quiz_iniciado: true,
-                    puntaje_quiz: 2,
-                    respuestas_quiz: [
-                        { id_pregunta: preguntasHelice[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
-                        { id_pregunta: preguntasHelice[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
-                    ]
-                });
-            }
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(22, 11, 15),
-                duracion_segundos: 240,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            if (preguntasChemamull.length >= 2) {
-                visitasAInsertar.push({
-                    id_usuario: admin.id_usuario,
-                    id_exhibicion: "chemomul",
-                    fecha_visita: crearFecha(22, 16, 20),
-                    duracion_segundos: 420,
-                    quiz_iniciado: true,
-                    puntaje_quiz: 0,
-                    respuestas_quiz: [
-                        {
-                            id_pregunta: preguntasChemamull[0].id_pregunta,
-                            id_respuesta_seleccionada: 2,
-                            es_correcta: false
-                        },
-                        {
-                            id_pregunta: preguntasChemamull[1].id_pregunta,
-                            id_respuesta_seleccionada: 2,
-                            es_correcta: false
-                        }
-                    ]
-                });
-            }
-
-            if (preguntasHuemul.length >= 3) {
-                visitasAInsertar.push({
-                    id_usuario: admin.id_usuario,
-                    id_exhibicion: "huemul",
-                    fecha_visita: crearFecha(21, 10, 45),
-                    duracion_segundos: 390,
-                    quiz_iniciado: true,
-                    puntaje_quiz: 1,
-                    respuestas_quiz: [
-                        { id_pregunta: preguntasHuemul[0].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false },
-                        { id_pregunta: preguntasHuemul[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
-                        { id_pregunta: preguntasHuemul[2].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false }
-                    ]
-                });
-            }
-
+            // Día 2: Algunas visitas dispersas
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "helice",
-                fecha_visita: crearFecha(21, 15, 10),
-                duracion_segundos: 330,
+                fecha_visita: crearFecha(2, 11, 30),
+                duracion_segundos: 300,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+            
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFecha(2, 15, 20),
+                duracion_segundos: 280,
                 quiz_iniciado: false,
                 puntaje_quiz: null,
                 respuestas_quiz: null
             });
 
-            if (preguntasCocodrilo.length >= 2) {
-                visitasAInsertar.push({
-                    id_usuario: admin.id_usuario,
-                    id_exhibicion: "cocodrilo",
-                    fecha_visita: crearFecha(20, 14, 30),
-                    duracion_segundos: 280,
-                    quiz_iniciado: true,
-                    puntaje_quiz: 2,
-                    respuestas_quiz: [
-                        { id_pregunta: preguntasCocodrilo[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
-                        { id_pregunta: preguntasCocodrilo[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
-                    ]
-                });
-            }
-
-            if (preguntasChemamull.length >= 2) {
-                visitasAInsertar.push({
-                    id_usuario: admin.id_usuario,
-                    id_exhibicion: "chemomul",
-                    fecha_visita: crearFecha(20, 16, 45),
-                    duracion_segundos: 360,
-                    quiz_iniciado: true,
-                    puntaje_quiz: 2,
-                    respuestas_quiz: [
-                        { id_pregunta: preguntasChemamull[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
-                        { id_pregunta: preguntasChemamull[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
-                    ]
-                });
-            }
-
+            // Día 3: Sin visitas (para mostrar dinamismo)
+            
+            // Día 4: Más visitas a las 14:00
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "huemul",
-                fecha_visita: crearFecha(18, 10, 20),
+                fecha_visita: crearFecha(4, 14, 5),
+                duracion_segundos: 400,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+            
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFecha(4, 14, 15),
+                duracion_segundos: 280,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            // Día 5: Sin visitas
+            
+            // Día 6-10: Algunas visitas dispersas en diferentes horarios
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFecha(10, 11, 0),
+                duracion_segundos: 400,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+            
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFecha(8, 15, 30),
+                duracion_segundos: 350,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+            
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFecha(6, 12, 15),
                 duracion_segundos: 300,
                 quiz_iniciado: false,
                 puntaje_quiz: null,
                 respuestas_quiz: null
             });
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(18, 15, 40),
-                duracion_segundos: 240,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            if (preguntasCocodrilo.length >= 2) {
-                visitasAInsertar.push({
-                    id_usuario: admin.id_usuario,
-                    id_exhibicion: "cocodrilo",
-                    fecha_visita: crearFecha(17, 11, 50),
-                    duracion_segundos: 280,
-                    quiz_iniciado: true,
-                    puntaje_quiz: 1,
-                    respuestas_quiz: [
-                        { id_pregunta: preguntasCocodrilo[0].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false },
-                        { id_pregunta: preguntasCocodrilo[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
-                    ]
-                });
-            }
-
-            if (preguntasChemamull.length >= 2) {
-                visitasAInsertar.push({
-                    id_usuario: admin.id_usuario,
-                    id_exhibicion: "chemomul",
-                    fecha_visita: crearFecha(17, 14, 15),
-                    duracion_segundos: 320,
-                    quiz_iniciado: true,
-                    puntaje_quiz: 1,
-                    respuestas_quiz: [
-                        { id_pregunta: preguntasChemamull[0].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false },
-                        { id_pregunta: preguntasChemamull[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
-                    ]
-                });
-            }
-
-            if (preguntasHuemul.length >= 3) {
-                visitasAInsertar.push({
-                    id_usuario: admin.id_usuario,
-                    id_exhibicion: "huemul",
-                    fecha_visita: crearFecha(16, 10, 40),
-                    duracion_segundos: 410,
-                    quiz_iniciado: true,
-                    puntaje_quiz: 2,
-                    respuestas_quiz: [
-                        { id_pregunta: preguntasHuemul[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
-                        { id_pregunta: preguntasHuemul[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
-                        { id_pregunta: preguntasHuemul[2].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false }
-                    ]
-                });
-            }
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(16, 16, 0),
-                duracion_segundos: 290,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            if (preguntasCocodrilo.length >= 2) {
-                visitasAInsertar.push({
-                    id_usuario: admin.id_usuario,
-                    id_exhibicion: "cocodrilo",
-                    fecha_visita: crearFecha(15, 11, 25),
-                    duracion_segundos: 260,
-                    quiz_iniciado: true,
-                    puntaje_quiz: 2,
-                    respuestas_quiz: [
-                        { id_pregunta: preguntasCocodrilo[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
-                        { id_pregunta: preguntasCocodrilo[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
-                    ]
-                });
-            }
-
-            if (preguntasChemamull.length >= 2) {
-                visitasAInsertar.push({
-                    id_usuario: admin.id_usuario,
-                    id_exhibicion: "chemomul",
-                    fecha_visita: crearFecha(15, 15, 35),
-                    duracion_segundos: 340,
-                    quiz_iniciado: true,
-                    puntaje_quiz: 0,
-                    respuestas_quiz: [
-                        { id_pregunta: preguntasChemamull[0].id_pregunta, id_respuesta_seleccionada: 3, es_correcta: false },
-                        { id_pregunta: preguntasChemamull[1].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false }
-                    ]
-                });
-            }
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(14, 12, 10),
-                duracion_segundos: 380,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(14, 14, 55),
-                duracion_segundos: 310,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(13, 10, 50),
-                duracion_segundos: 270,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(13, 16, 25),
-                duracion_segundos: 350,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(11, 11, 5),
-                duracion_segundos: 400,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(11, 15, 20),
-                duracion_segundos: 295,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(10, 10, 35),
-                duracion_segundos: 255,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(10, 14, 40),
-                duracion_segundos: 330,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(9, 12, 20),
-                duracion_segundos: 370,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(9, 16, 10),
-                duracion_segundos: 305,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(8, 11, 40),
-                duracion_segundos: 285,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(8, 15, 0),
-                duracion_segundos: 345,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(7, 10, 25),
-                duracion_segundos: 395,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(7, 14, 25),
-                duracion_segundos: 315,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(6, 11, 55),
-                duracion_segundos: 265,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(6, 16, 30),
-                duracion_segundos: 355,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(4, 10, 15),
-                duracion_segundos: 405,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(4, 15, 45),
-                duracion_segundos: 325,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(3, 12, 0),
-                duracion_segundos: 275,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(3, 14, 50),
-                duracion_segundos: 365,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(2, 11, 30),
-                duracion_segundos: 385,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(2, 16, 5),
-                duracion_segundos: 335,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(1, 10, 55),
-                duracion_segundos: 290,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(1, 15, 15),
-                duracion_segundos: 375,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(0, 12, 10),
-                duracion_segundos: 415,
-                quiz_iniciado: false,
-                puntaje_quiz: null,
-                respuestas_quiz: null
-            });
-
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(0, 14, 35),
-                duracion_segundos: 345,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
-
             await visitaRepo.save(visitasAInsertar);
             
-            console.log(`  Se insertaron ${visitasAInsertar.length} visitas de ejemplo con horarios variados:`);
-            console.log("    - Horario matutino (10:00-13:00): 4 visitas");
-            console.log("    - Hora Punta tarde (14:00-17:30): 11 visitas");
-            console.log("    - Total alineado con horario del museo: 10:00-13:00, 14:00-17:30");
+            console.log(`  Se insertaron ${visitasAInsertar.length} visitas de ejemplo con patrón realista:`);
+            console.log("    - Día 1: Alta concentración a las 14:00 (5 visitas = HORA PUNTA)");
+            console.log("    - Día 2: 2 visitas dispersas");
+            console.log("    - Días 3, 5, 7, 9: Sin visitas (dinamismo)");
+            console.log("    - Otros días: 1-2 visitas en horarios variados");
         } else {
             console.log(`  Ya existen ${visitaCount} visita(s).`);
         }
