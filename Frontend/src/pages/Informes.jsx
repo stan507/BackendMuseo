@@ -449,7 +449,15 @@ export default function Informes() {
                               </span>
                             )}
                           </div>
-                          <p className="text-gray-800">{pregunta.texto}</p>
+                          {pregunta.quiz_titulo && (
+                            <p className="text-sm text-purple-600 font-semibold mb-1">
+                              {pregunta.quiz_titulo}
+                            </p>
+                          )}
+                          <p className="text-gray-700 font-medium mb-1">
+                            {pregunta.titulo_pregunta}
+                          </p>
+                          <p className="text-gray-800 italic">{pregunta.texto}</p>
                         </div>
                         <div className="flex-shrink-0">
                           <div className="bg-red-600 text-white px-4 py-2 rounded-full font-bold text-lg">

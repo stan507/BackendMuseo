@@ -151,7 +151,8 @@ export async function getEstadisticasService(desde, hasta) {
                 e.nombre as exhibicion_nombre,
                 COALESCE(v.puntaje_quiz, 0) as puntaje_quiz,
                 COALESCE(q.cant_preguntas, 0) as preguntas_totales,
-                v.respuestas_quiz
+                v.respuestas_quiz,
+                q.titulo as quiz_titulo
             FROM visita v
             LEFT JOIN exhibicion e ON v.id_exhibicion = e.id_exhibicion
             LEFT JOIN quizz q ON v.id_exhibicion = q.id_exhibicion AND q.es_activo = true
@@ -258,6 +259,8 @@ export async function getEstadisticasService(desde, hasta) {
                         if (!preguntasDificiles[key]) {
                             preguntasDificiles[key] = {
                                 exhibicion: v.exhibicion_nombre || v.id_exhibicion,
+                                quiz_titulo: v.quiz_titulo || 'Quiz desconocido',
+                                titulo_pregunta: respuesta.titulo_pregunta || 'Sin título',
                                 texto: respuesta.texto_pregunta || 'Pregunta desconocida',
                                 errores: 0
                             };

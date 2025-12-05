@@ -458,10 +458,16 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
                 doc.fontSize(11).fillColor('#CC0000');
                 doc.text(`${idx + 1}. [${pregunta.errores} errores]`, { continued: true });
                 doc.fillColor('#0066CC');
-                doc.text(` [${pregunta.exhibicion}]`, { continued: true });
+                doc.text(` [${pregunta.exhibicion}]`, { continued: false });
+                
+                doc.fillColor('#7C3AED').fontSize(10);
+                doc.text(`   ${pregunta.quiz_titulo || 'Quiz desconocido'}`);
+                
+                doc.fillColor('#374151').fontSize(10);
+                doc.text(`   ${pregunta.titulo_pregunta || 'Sin título'}: ${pregunta.texto}`);
+                
                 doc.fillColor('#000000');
-                doc.text(` ${pregunta.texto}`);
-                doc.moveDown(0.5);
+                doc.moveDown(0.7);
             });
             doc.moveDown();
 

@@ -141,7 +141,7 @@ export async function seedDatabase() {
                     id_usuario: admin.id_usuario,
                     id_exhibicion: "helice",
                     titulo: "Quiz sobre la helice",
-                    cant_preguntas: 3,
+                    cant_preguntas: 2,
                     es_activo: true
                 });
 
