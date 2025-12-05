@@ -281,8 +281,19 @@ export async function seedDatabase() {
                 fecha_visita: crearFecha(24, 14, 20),
                 duracion_segundos: 360,
                 quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
+                puntaje_quiz: 1,
+                respuestas_quiz: [
+                    {
+                        id_pregunta: p6.id_pregunta,
+                        id_respuesta_seleccionada: 1,
+                        es_correcta: true
+                    },
+                    {
+                        id_pregunta: p7.id_pregunta,
+                        id_respuesta_seleccionada: 2,
+                        es_correcta: false
+                    }
+                ]
             });
 
             visitasAInsertar.push({
@@ -331,8 +342,19 @@ export async function seedDatabase() {
                 fecha_visita: crearFecha(22, 16, 20),
                 duracion_segundos: 420,
                 quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
+                puntaje_quiz: 0,
+                respuestas_quiz: [
+                    {
+                        id_pregunta: p6.id_pregunta,
+                        id_respuesta_seleccionada: 2,
+                        es_correcta: false
+                    },
+                    {
+                        id_pregunta: p7.id_pregunta,
+                        id_respuesta_seleccionada: 2,
+                        es_correcta: false
+                    }
+                ]
             });
 
             visitasAInsertar.push({

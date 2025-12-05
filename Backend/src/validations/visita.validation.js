@@ -43,8 +43,7 @@ export const updateDuracionSchema = Joi.object({
         .items(Joi.object({
             id_pregunta: Joi.number().integer().required(),
             id_respuesta_seleccionada: Joi.number().integer().required(),
-            es_correcta: Joi.boolean().required(),
-            texto_pregunta: Joi.string().optional()
+            es_correcta: Joi.boolean().required()
         }))
         .optional()
         .allow(null)

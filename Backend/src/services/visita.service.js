@@ -251,25 +251,43 @@ export async function getEstadisticasService(desde, hasta) {
 
         // Analizar preguntas más difíciles (más errores)
         const preguntasDificiles = {};
-        visitas.forEach(v => {
+        const preguntasCache = {}; // Cache para no consultar la misma pregunta múltiples veces
+        
+        for (const v of visitas) {
             if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz)) {
-                v.respuestas_quiz.forEach(respuesta => {
+                for (const respuesta of v.respuestas_quiz) {
                     if (!respuesta.es_correcta) {
-                        const key = `${v.id_exhibicion}_${respuesta.texto_pregunta || respuesta.id_pregunta}`;
+                        const key = `${v.id_exhibicion}_${respuesta.id_pregunta}`;
+                        
                         if (!preguntasDificiles[key]) {
+                            // Obtener información de la pregunta desde la base de datos
+                            let preguntaInfo = preguntasCache[respuesta.id_pregunta];
+                            
+                            if (!preguntaInfo) {
+                                const queryPregunta = `
+                                    SELECT p.titulo, p.texto, q.titulo as quiz_titulo
+                                    FROM pregunta p
+                                    JOIN quizz q ON p.id_quizz = q.id_quizz
+                                    WHERE p.id_pregunta = $1
+                                `;
+                                const [preguntaData] = await AppDataSource.query(queryPregunta, [respuesta.id_pregunta]);
+                                preguntaInfo = preguntaData || { titulo: 'Sin título', texto: 'Pregunta desconocida', quiz_titulo: 'Quiz desconocido' };
+                                preguntasCache[respuesta.id_pregunta] = preguntaInfo;
+                            }
+                            
                             preguntasDificiles[key] = {
                                 exhibicion: v.exhibicion_nombre || v.id_exhibicion,
-                                quiz_titulo: v.quiz_titulo || 'Quiz desconocido',
-                                titulo_pregunta: respuesta.titulo_pregunta || 'Sin título',
-                                texto: respuesta.texto_pregunta || 'Pregunta desconocida',
+                                quiz_titulo: preguntaInfo.quiz_titulo,
+                                titulo_pregunta: preguntaInfo.titulo,
+                                texto: preguntaInfo.texto,
                                 errores: 0
                             };
                         }
                         preguntasDificiles[key].errores++;
                     }
-                });
+                }
             }
-        });
+        }
 
         return [{
             totalVisitas,
