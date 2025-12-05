@@ -249,7 +249,7 @@ export async function getEstadisticasService(desde, hasta) {
         const preguntasCache = {}; // Cache para no consultar la misma pregunta múltiples veces
         
         for (const v of visitas) {
-            if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz)) {
+            if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz) && v.respuestas_quiz.length > 0) {
                 for (const respuesta of v.respuestas_quiz) {
                     if (!respuesta.es_correcta && respuesta.id_pregunta) {
                         const key = `${v.id_exhibicion}_${respuesta.id_pregunta}`;

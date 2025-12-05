@@ -287,25 +287,51 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
             visitas: visitasPorHora[hora]
         }));
 
-    // Preguntas difíciles
+    // Preguntas difíciles - obtener dinámicamente de la base de datos
     const preguntasDificiles = {};
-    visitas.forEach(v => {
-        if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz)) {
-            v.respuestas_quiz.forEach(respuesta => {
-                if (!respuesta.es_correcta) {
-                    const key = `${v.id_exhibicion}_${respuesta.texto_pregunta || 'Pregunta desconocida'}`;
+    const preguntasCache = {};
+    
+    for (const v of visitas) {
+        if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz) && v.respuestas_quiz.length > 0) {
+            for (const respuesta of v.respuestas_quiz) {
+                if (!respuesta.es_correcta && respuesta.id_pregunta) {
+                    const key = `${v.id_exhibicion}_${respuesta.id_pregunta}`;
+                    
                     if (!preguntasDificiles[key]) {
-                        preguntasDificiles[key] = {
-                            exhibicion: visitasPorExhibicion[v.id_exhibicion]?.nombre || v.id_exhibicion,
-                            texto: respuesta.texto_pregunta || 'Pregunta desconocida',
-                            errores: 0
-                        };
+                        let preguntaInfo = preguntasCache[respuesta.id_pregunta];
+                        
+                        if (!preguntaInfo) {
+                            const queryPregunta = `
+                                SELECT p.titulo, p.texto, q.titulo as quiz_titulo
+                                FROM pregunta p
+                                JOIN quizz q ON p.id_quizz = q.id_quizz
+                                WHERE p.id_pregunta = $1
+                            `;
+                            const [preguntaData] = await AppDataSource.query(queryPregunta, [respuesta.id_pregunta]);
+                            if (preguntaData) {
+                                preguntaInfo = preguntaData;
+                                preguntasCache[respuesta.id_pregunta] = preguntaInfo;
+                            }
+                        }
+                        
+                        if (preguntaInfo) {
+                            preguntasDificiles[key] = {
+                                exhibicion: visitasPorExhibicion[v.id_exhibicion]?.nombre || v.id_exhibicion,
+                                quiz_titulo: preguntaInfo.quiz_titulo,
+                                titulo_pregunta: preguntaInfo.titulo,
+                                texto: preguntaInfo.texto,
+                                errores: 0
+                            };
+                        }
                     }
-                    preguntasDificiles[key].errores++;
+                    
+                    if (preguntasDificiles[key]) {
+                        preguntasDificiles[key].errores++;
+                    }
                 }
-            });
+            }
         }
-    });
+    }
 
     return {
         totalVisitas,
