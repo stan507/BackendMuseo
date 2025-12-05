@@ -18,7 +18,7 @@ export default function MinIO() {
     { value: 'fotos', label: 'Fotos', extensiones: ['.jpg', '.jpeg', '.png'] },
     { value: 'audios', label: 'Audios', extensiones: ['.mp3'] },
     { value: 'modelo3D', label: 'Modelos 3D', extensiones: ['.gltf', '.glb', '.bin'] },
-    { value: 'textura', label: 'Texturas', extensiones: ['.jpg', '.jpeg', '.png'] }
+    { value: 'textura', label: 'Foto en 360°', extensiones: ['.jpg', '.jpeg', '.png'] }
   ];
 
   const obtenerExtensionesPermitidas = () => {

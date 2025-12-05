@@ -256,7 +256,7 @@ export async function getEstadisticasService(desde, hasta) {
         for (const v of visitas) {
             if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz)) {
                 for (const respuesta of v.respuestas_quiz) {
-                    if (!respuesta.es_correcta) {
+                    if (!respuesta.es_correcta && respuesta.id_pregunta) {
                         const key = `${v.id_exhibicion}_${respuesta.id_pregunta}`;
                         
                         if (!preguntasDificiles[key]) {

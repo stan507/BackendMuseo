@@ -245,6 +245,14 @@ export async function seedDatabase() {
             
             const quizzHuemul = await quizzRepo.findOne({ where: { id_exhibicion: "huemul" } });
             const quizzHelice = await quizzRepo.findOne({ where: { id_exhibicion: "helice" } });
+            const quizzChemamull = await quizzRepo.findOne({ where: { id_exhibicion: "chemomul" } });
+            const quizzCocodrilo = await quizzRepo.findOne({ where: { id_exhibicion: "cocodrilo" } });
+            
+            // Obtener preguntas de todos los quizzes para usar en las respuestas
+            const preguntasHuemul = quizzHuemul ? await preguntaRepo.find({ where: { id_quizz: quizzHuemul.id_quizz } }) : [];
+            const preguntasHelice = quizzHelice ? await preguntaRepo.find({ where: { id_quizz: quizzHelice.id_quizz } }) : [];
+            const preguntasChemamull = quizzChemamull ? await preguntaRepo.find({ where: { id_quizz: quizzChemamull.id_quizz } }) : [];
+            const preguntasCocodrilo = quizzCocodrilo ? await preguntaRepo.find({ where: { id_quizz: quizzCocodrilo.id_quizz } }) : [];
             
             const crearFecha = (diasAtras, hora, minutos = 0) => {
                 const fecha = new Date();
@@ -255,15 +263,21 @@ export async function seedDatabase() {
 
             const visitasAInsertar = [];
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(25, 10, 15),
-                duracion_segundos: 420,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
+            if (preguntasHuemul.length >= 3) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "huemul",
+                    fecha_visita: crearFecha(25, 10, 15),
+                    duracion_segundos: 420,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 3,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasHuemul[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasHuemul[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasHuemul[2].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
+                    ]
+                });
+            }
 
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
@@ -275,26 +289,28 @@ export async function seedDatabase() {
                 respuestas_quiz: null
             });
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(24, 14, 20),
-                duracion_segundos: 360,
-                quiz_iniciado: true,
-                puntaje_quiz: 1,
-                respuestas_quiz: [
-                    {
-                        id_pregunta: p6.id_pregunta,
-                        id_respuesta_seleccionada: 1,
-                        es_correcta: true
-                    },
-                    {
-                        id_pregunta: p7.id_pregunta,
-                        id_respuesta_seleccionada: 2,
-                        es_correcta: false
-                    }
-                ]
-            });
+            if (preguntasChemamull.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "chemomul",
+                    fecha_visita: crearFecha(24, 14, 20),
+                    duracion_segundos: 360,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 1,
+                    respuestas_quiz: [
+                        {
+                            id_pregunta: preguntasChemamull[0].id_pregunta,
+                            id_respuesta_seleccionada: 1,
+                            es_correcta: true
+                        },
+                        {
+                            id_pregunta: preguntasChemamull[1].id_pregunta,
+                            id_respuesta_seleccionada: 2,
+                            es_correcta: false
+                        }
+                    ]
+                });
+            }
 
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
@@ -306,25 +322,36 @@ export async function seedDatabase() {
                 respuestas_quiz: null
             });
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(23, 10, 30),
-                duracion_segundos: 450,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
+            if (preguntasHuemul.length >= 3) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "huemul",
+                    fecha_visita: crearFecha(23, 10, 30),
+                    duracion_segundos: 450,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 2,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasHuemul[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasHuemul[1].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false },
+                        { id_pregunta: preguntasHuemul[2].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
+                    ]
+                });
+            }
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "helice",
-                fecha_visita: crearFecha(23, 14, 50),
-                duracion_segundos: 380,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
+            if (preguntasHelice.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "helice",
+                    fecha_visita: crearFecha(23, 14, 50),
+                    duracion_segundos: 380,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 2,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasHelice[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasHelice[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
+                    ]
+                });
+            }
 
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
@@ -336,36 +363,44 @@ export async function seedDatabase() {
                 respuestas_quiz: null
             });
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(22, 16, 20),
-                duracion_segundos: 420,
-                quiz_iniciado: true,
-                puntaje_quiz: 0,
-                respuestas_quiz: [
-                    {
-                        id_pregunta: p6.id_pregunta,
-                        id_respuesta_seleccionada: 2,
-                        es_correcta: false
-                    },
-                    {
-                        id_pregunta: p7.id_pregunta,
-                        id_respuesta_seleccionada: 2,
-                        es_correcta: false
-                    }
-                ]
-            });
+            if (preguntasChemamull.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "chemomul",
+                    fecha_visita: crearFecha(22, 16, 20),
+                    duracion_segundos: 420,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 0,
+                    respuestas_quiz: [
+                        {
+                            id_pregunta: preguntasChemamull[0].id_pregunta,
+                            id_respuesta_seleccionada: 2,
+                            es_correcta: false
+                        },
+                        {
+                            id_pregunta: preguntasChemamull[1].id_pregunta,
+                            id_respuesta_seleccionada: 2,
+                            es_correcta: false
+                        }
+                    ]
+                });
+            }
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(21, 10, 45),
-                duracion_segundos: 390,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
+            if (preguntasHuemul.length >= 3) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "huemul",
+                    fecha_visita: crearFecha(21, 10, 45),
+                    duracion_segundos: 390,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 1,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasHuemul[0].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false },
+                        { id_pregunta: preguntasHuemul[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasHuemul[2].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false }
+                    ]
+                });
+            }
 
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
@@ -377,25 +412,35 @@ export async function seedDatabase() {
                 respuestas_quiz: null
             });
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(20, 14, 30),
-                duracion_segundos: 280,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
+            if (preguntasCocodrilo.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "cocodrilo",
+                    fecha_visita: crearFecha(20, 14, 30),
+                    duracion_segundos: 280,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 2,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasCocodrilo[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasCocodrilo[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
+                    ]
+                });
+            }
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(20, 16, 45),
-                duracion_segundos: 360,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
+            if (preguntasChemamull.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "chemomul",
+                    fecha_visita: crearFecha(20, 16, 45),
+                    duracion_segundos: 360,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 2,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasChemamull[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasChemamull[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
+                    ]
+                });
+            }
 
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
@@ -417,35 +462,51 @@ export async function seedDatabase() {
                 respuestas_quiz: null
             });
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(17, 11, 50),
-                duracion_segundos: 280,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
+            if (preguntasCocodrilo.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "cocodrilo",
+                    fecha_visita: crearFecha(17, 11, 50),
+                    duracion_segundos: 280,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 1,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasCocodrilo[0].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false },
+                        { id_pregunta: preguntasCocodrilo[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
+                    ]
+                });
+            }
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(17, 14, 15),
-                duracion_segundos: 320,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
+            if (preguntasChemamull.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "chemomul",
+                    fecha_visita: crearFecha(17, 14, 15),
+                    duracion_segundos: 320,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 1,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasChemamull[0].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false },
+                        { id_pregunta: preguntasChemamull[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
+                    ]
+                });
+            }
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "huemul",
-                fecha_visita: crearFecha(16, 10, 40),
-                duracion_segundos: 410,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
+            if (preguntasHuemul.length >= 3) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "huemul",
+                    fecha_visita: crearFecha(16, 10, 40),
+                    duracion_segundos: 410,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 2,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasHuemul[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasHuemul[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasHuemul[2].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false }
+                    ]
+                });
+            }
 
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
@@ -457,25 +518,35 @@ export async function seedDatabase() {
                 respuestas_quiz: null
             });
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "cocodrilo",
-                fecha_visita: crearFecha(15, 11, 25),
-                duracion_segundos: 260,
-                quiz_iniciado: true,
-                puntaje_quiz: 3,
-                respuestas_quiz: []
-            });
+            if (preguntasCocodrilo.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "cocodrilo",
+                    fecha_visita: crearFecha(15, 11, 25),
+                    duracion_segundos: 260,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 2,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasCocodrilo[0].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true },
+                        { id_pregunta: preguntasCocodrilo[1].id_pregunta, id_respuesta_seleccionada: 1, es_correcta: true }
+                    ]
+                });
+            }
 
-            visitasAInsertar.push({
-                id_usuario: admin.id_usuario,
-                id_exhibicion: "chemomul",
-                fecha_visita: crearFecha(15, 15, 35),
-                duracion_segundos: 340,
-                quiz_iniciado: true,
-                puntaje_quiz: 2,
-                respuestas_quiz: []
-            });
+            if (preguntasChemamull.length >= 2) {
+                visitasAInsertar.push({
+                    id_usuario: admin.id_usuario,
+                    id_exhibicion: "chemomul",
+                    fecha_visita: crearFecha(15, 15, 35),
+                    duracion_segundos: 340,
+                    quiz_iniciado: true,
+                    puntaje_quiz: 0,
+                    respuestas_quiz: [
+                        { id_pregunta: preguntasChemamull[0].id_pregunta, id_respuesta_seleccionada: 3, es_correcta: false },
+                        { id_pregunta: preguntasChemamull[1].id_pregunta, id_respuesta_seleccionada: 2, es_correcta: false }
+                    ]
+                });
+            }
 
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
