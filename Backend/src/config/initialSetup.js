@@ -8,6 +8,13 @@ import { Respuesta } from "../entity/Respuesta.entity.js";
 import { Visita } from "../entity/Visita.entity.js";
 import { Responde } from "../entity/Responde.entity.js";
 import bcrypt from "bcryptjs";
+import { minioClient, bucketName } from "./minio.config.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Datos iniciales de las 4 exhibiciones del museo
@@ -35,15 +42,9 @@ const exhibicionesIniciales = [
     }
 ];
 
-/**
- * Usuario admin predefinido (sin ID, lo genera la BD)
- * La contraseña se encriptará antes de insertarse
- */
-const adminPassword = "admin123"; // Contraseña en texto plano (se encriptará)
 
-/**
- * Función que verifica si la tabla está vacía y, de ser así, inserta los datos iniciales
- */
+const adminPassword = "admin123";
+
 export async function seedDatabase() {
     try {
         // Repositorios
@@ -152,13 +153,13 @@ export async function seedDatabase() {
                 await respuestaRepo.save([
                     { id_pregunta: p4.id_pregunta, texto: "Madera laminada", es_correcta: true },
                     { id_pregunta: p4.id_pregunta, texto: "Aluminio", es_correcta: false },
-                    { id_pregunta: p4.id_pregunta, texto: "Plastico", es_correcta: false }
+                    { id_pregunta: p4.id_pregunta, texto: "Plástico", es_correcta: false }
                 ]);
 
                 const p5 = await preguntaRepo.save({
                     id_quizz: quizHelice.id_quizz,
-                    titulo: "Epoca de la helice",
-                    texto: "A que epoca pertenece esta helice?"
+                    titulo: "Época de la hélice",
+                    texto: "¿A qué época pertenece esta hélice?"
                 });
                 await respuestaRepo.save([
                     { id_pregunta: p5.id_pregunta, texto: "Principios del siglo XX", es_correcta: true },
@@ -242,25 +243,22 @@ export async function seedDatabase() {
         if (visitaCount === 0 && admin) {
             console.log("Insertando visitas de ejemplo con escenarios de quiz y horarios variados...");
             
-            // Obtener los quizzes para las visitas
             const quizzHuemul = await quizzRepo.findOne({ where: { id_exhibicion: "huemul" } });
             const quizzHelice = await quizzRepo.findOne({ where: { id_exhibicion: "helice" } });
             
-            // Función auxiliar para crear fecha con hora específica (hoy con hora personalizada)
-            const crearFechaConHora = (hora, minutos = 0) => {
+            const crearFecha = (diasAtras, hora, minutos = 0) => {
                 const fecha = new Date();
+                fecha.setDate(fecha.getDate() - diasAtras);
                 fecha.setHours(hora, minutos, 0, 0);
                 return fecha;
             };
 
-            // Crear visitas en diferentes horarios para simular tráfico realista
             const visitasAInsertar = [];
 
-            // Horario matutino (10:00 - 13:00) - Visitas de martes a viernes
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "huemul",
-                fecha_visita: crearFechaConHora(10, 15),
+                fecha_visita: crearFecha(25, 10, 15),
                 duracion_segundos: 420,
                 quiz_iniciado: true,
                 puntaje_quiz: 3,
@@ -270,7 +268,7 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "helice",
-                fecha_visita: crearFechaConHora(10, 45),
+                fecha_visita: crearFecha(25, 11, 30),
                 duracion_segundos: 300,
                 quiz_iniciado: false,
                 puntaje_quiz: null,
@@ -280,31 +278,27 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "chemomul",
-                fecha_visita: crearFechaConHora(11, 20),
+                fecha_visita: crearFecha(24, 14, 20),
                 duracion_segundos: 360,
                 quiz_iniciado: true,
                 puntaje_quiz: 2,
-                respuestas_quiz: [
-                    { texto_pregunta: "Pregunta 1", texto_respuesta_seleccionada: "Respuesta correcta", es_correcta: true, tiempo_respuesta_segundos: 18 },
-                    { texto_pregunta: "Pregunta 2", texto_respuesta_seleccionada: "Respuesta incorrecta", es_correcta: false, tiempo_respuesta_segundos: 22 }
-                ]
+                respuestas_quiz: []
             });
 
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "cocodrilo",
-                fecha_visita: crearFechaConHora(12, 30),
+                fecha_visita: crearFecha(24, 15, 45),
                 duracion_segundos: 280,
                 quiz_iniciado: false,
                 puntaje_quiz: null,
                 respuestas_quiz: null
             });
 
-            // Horario tarde PICO (14:00 - 17:30) - Martes a viernes, mayor trafico
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "huemul",
-                fecha_visita: crearFechaConHora(14, 10),
+                fecha_visita: crearFecha(23, 10, 30),
                 duracion_segundos: 450,
                 quiz_iniciado: true,
                 puntaje_quiz: 3,
@@ -314,7 +308,7 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "helice",
-                fecha_visita: crearFechaConHora(14, 35),
+                fecha_visita: crearFecha(23, 14, 50),
                 duracion_segundos: 380,
                 quiz_iniciado: true,
                 puntaje_quiz: 2,
@@ -324,7 +318,7 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "cocodrilo",
-                fecha_visita: crearFechaConHora(15, 0),
+                fecha_visita: crearFecha(22, 11, 15),
                 duracion_segundos: 240,
                 quiz_iniciado: false,
                 puntaje_quiz: null,
@@ -334,7 +328,7 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "chemomul",
-                fecha_visita: crearFechaConHora(15, 20),
+                fecha_visita: crearFecha(22, 16, 20),
                 duracion_segundos: 420,
                 quiz_iniciado: true,
                 puntaje_quiz: 3,
@@ -344,7 +338,7 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "huemul",
-                fecha_visita: crearFechaConHora(15, 50),
+                fecha_visita: crearFecha(21, 10, 45),
                 duracion_segundos: 390,
                 quiz_iniciado: true,
                 puntaje_quiz: 2,
@@ -354,7 +348,7 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "helice",
-                fecha_visita: crearFechaConHora(16, 15),
+                fecha_visita: crearFecha(21, 15, 10),
                 duracion_segundos: 330,
                 quiz_iniciado: false,
                 puntaje_quiz: null,
@@ -364,7 +358,7 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "cocodrilo",
-                fecha_visita: crearFechaConHora(16, 45),
+                fecha_visita: crearFecha(20, 14, 30),
                 duracion_segundos: 280,
                 quiz_iniciado: true,
                 puntaje_quiz: 2,
@@ -374,18 +368,17 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "chemomul",
-                fecha_visita: crearFechaConHora(17, 10),
+                fecha_visita: crearFecha(20, 16, 45),
                 duracion_segundos: 360,
                 quiz_iniciado: true,
                 puntaje_quiz: 3,
                 respuestas_quiz: []
             });
 
-            // Horario fin de semana sabado/domingo (14:30 - 17:30) - Trafico moderado
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "huemul",
-                fecha_visita: crearFechaConHora(14, 40),
+                fecha_visita: crearFecha(18, 10, 20),
                 duracion_segundos: 300,
                 quiz_iniciado: false,
                 puntaje_quiz: null,
@@ -395,7 +388,7 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "helice",
-                fecha_visita: crearFechaConHora(15, 30),
+                fecha_visita: crearFecha(18, 15, 40),
                 duracion_segundos: 240,
                 quiz_iniciado: false,
                 puntaje_quiz: null,
@@ -405,10 +398,320 @@ export async function seedDatabase() {
             visitasAInsertar.push({
                 id_usuario: admin.id_usuario,
                 id_exhibicion: "cocodrilo",
-                fecha_visita: crearFechaConHora(16, 50),
+                fecha_visita: crearFecha(17, 11, 50),
                 duracion_segundos: 280,
                 quiz_iniciado: true,
                 puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFecha(17, 14, 15),
+                duracion_segundos: 320,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFecha(16, 10, 40),
+                duracion_segundos: 410,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFecha(16, 16, 0),
+                duracion_segundos: 290,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFecha(15, 11, 25),
+                duracion_segundos: 260,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFecha(15, 15, 35),
+                duracion_segundos: 340,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFecha(14, 12, 10),
+                duracion_segundos: 380,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFecha(14, 14, 55),
+                duracion_segundos: 310,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFecha(13, 10, 50),
+                duracion_segundos: 270,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFecha(13, 16, 25),
+                duracion_segundos: 350,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFecha(11, 11, 5),
+                duracion_segundos: 400,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFecha(11, 15, 20),
+                duracion_segundos: 295,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFecha(10, 10, 35),
+                duracion_segundos: 255,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFecha(10, 14, 40),
+                duracion_segundos: 330,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFecha(9, 12, 20),
+                duracion_segundos: 370,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFecha(9, 16, 10),
+                duracion_segundos: 305,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFecha(8, 11, 40),
+                duracion_segundos: 285,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFecha(8, 15, 0),
+                duracion_segundos: 345,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFecha(7, 10, 25),
+                duracion_segundos: 395,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFecha(7, 14, 25),
+                duracion_segundos: 315,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFecha(6, 11, 55),
+                duracion_segundos: 265,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFecha(6, 16, 30),
+                duracion_segundos: 355,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFecha(4, 10, 15),
+                duracion_segundos: 405,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFecha(4, 15, 45),
+                duracion_segundos: 325,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFecha(3, 12, 0),
+                duracion_segundos: 275,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFecha(3, 14, 50),
+                duracion_segundos: 365,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFecha(2, 11, 30),
+                duracion_segundos: 385,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFecha(2, 16, 5),
+                duracion_segundos: 335,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "cocodrilo",
+                fecha_visita: crearFecha(1, 10, 55),
+                duracion_segundos: 290,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "chemomul",
+                fecha_visita: crearFecha(1, 15, 15),
+                duracion_segundos: 375,
+                quiz_iniciado: true,
+                puntaje_quiz: 2,
+                respuestas_quiz: []
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "huemul",
+                fecha_visita: crearFecha(0, 12, 10),
+                duracion_segundos: 415,
+                quiz_iniciado: false,
+                puntaje_quiz: null,
+                respuestas_quiz: null
+            });
+
+            visitasAInsertar.push({
+                id_usuario: admin.id_usuario,
+                id_exhibicion: "helice",
+                fecha_visita: crearFecha(0, 14, 35),
+                duracion_segundos: 345,
+                quiz_iniciado: true,
+                puntaje_quiz: 3,
                 respuestas_quiz: []
             });
 
@@ -416,7 +719,7 @@ export async function seedDatabase() {
             
             console.log(`  Se insertaron ${visitasAInsertar.length} visitas de ejemplo con horarios variados:`);
             console.log("    - Horario matutino (10:00-13:00): 4 visitas");
-            console.log("    - Horario PICO tarde (14:00-17:30): 11 visitas");
+            console.log("    - Hora Punta tarde (14:00-17:30): 11 visitas");
             console.log("    - Total alineado con horario del museo: 10:00-13:00, 14:00-17:30");
         } else {
             console.log(`  Ya existen ${visitaCount} visita(s).`);
@@ -451,10 +754,106 @@ export async function seedDatabase() {
             console.log("  Columna 'quiz_iniciado' ya existe o error:", error.message);
         }
 
+        // 7. VALIDACION DE ARCHIVOS EN MINIO
+        console.log("Verificando archivos en MinIO...");
+        await verificarArchivosMinIO();
+
         console.log("Inicializacion completada.");
     } catch (error) {
         console.error("Error al poblar la base de datos:", error);
         throw error;
+    }
+}
+
+
+async function verificarArchivosMinIO() {
+    const exhibiciones = ['huemul', 'helice', 'chemomul', 'cocodrilo'];
+    const carpetas = ['videos', 'fotos', 'audios', 'modelo3D', 'textura'];
+    
+    let totalArchivos = 0;
+    let carpetasVacias = 0;
+    let archivosSubidos = 0;
+    const assetsPath = path.join(__dirname, '../../assets');
+
+    try {
+        // Verificar que el bucket exista
+        const bucketExists = await minioClient.bucketExists(bucketName);
+        if (!bucketExists) {
+            console.log(` Bucket '${bucketName}' no existe en MinIO. Creando...`);
+            await minioClient.makeBucket(bucketName, 'us-east-1');
+            console.log(` Bucket '${bucketName}' creado exitosamente.`);
+        }
+
+        for (const exhibicion of exhibiciones) {
+            for (const carpeta of carpetas) {
+                const prefix = `${exhibicion}/${carpeta}/`;
+                
+                try {
+                    const stream = minioClient.listObjects(bucketName, prefix, false);
+                    let archivosEnCarpeta = 0;
+
+                    await new Promise((resolve, reject) => {
+                        stream.on('data', (obj) => {
+                            if (!obj.name.endsWith('/')) {
+                                archivosEnCarpeta++;
+                                totalArchivos++;
+                            }
+                        });
+                        stream.on('error', reject);
+                        stream.on('end', resolve);
+                    });
+
+                    if (archivosEnCarpeta === 0) {
+                        carpetasVacias++;
+                        const carpetaLocal = path.join(assetsPath, exhibicion, carpeta);
+                        
+                        if (fs.existsSync(carpetaLocal)) {
+                            const archivosLocales = fs.readdirSync(carpetaLocal);
+                            const archivosValidos = archivosLocales.filter(file => 
+                                !file.startsWith('.') && fs.statSync(path.join(carpetaLocal, file)).isFile()
+                            );
+
+                            if (archivosValidos.length > 0) {
+                                console.log(`Subiendo archivos de respaldo a ${prefix}...`);
+                                
+                                for (const archivo of archivosValidos) {
+                                    try {
+                                        const archivoPath = path.join(carpetaLocal, archivo);
+                                        const objectName = `${prefix}${archivo}`;
+                                        
+                                        await minioClient.fPutObject(bucketName, objectName, archivoPath);
+                                        archivosSubidos++;
+                                        console.log(`    ✓ ${archivo}`);
+                                    } catch (uploadError) {
+                                        console.error(`    ✗ Error al subir ${archivo}:`, uploadError.message);
+                                    }
+                                }
+                            } else {
+                                console.log(`${prefix} vacío (no hay archivos de respaldo en Backend/assets)`);
+                            }
+                        } else {
+                            console.log(`${prefix} vacío (carpeta de respaldo no existe)`);
+                        }
+                    }
+                } catch (error) {
+                    console.error(` Error al verificar ${prefix}:`, error.message);
+                }
+            }
+        }
+
+        console.log(`\nResumen de validación MinIO:`);
+        console.log(` - Total archivos encontrados: ${totalArchivos}`);
+        if (archivosSubidos > 0) {
+            console.log(` - Archivos subidos automáticamente: ${archivosSubidos}`);
+        }
+        if (carpetasVacias > archivosSubidos) {
+            console.log(` - Carpetas vacías sin respaldo: ${carpetasVacias - (archivosSubidos > 0 ? Math.floor(archivosSubidos / 5) : 0)}`);
+            console.log(`Coloca archivos en Backend/assets/ para subida automática`);
+        }
+
+    } catch (error) {
+        console.error(" Error al verificar archivos en MinIO:", error.message);
+        console.log("  Verifica que MinIO esté corriendo y las credenciales sean correctas");
     }
 }
 

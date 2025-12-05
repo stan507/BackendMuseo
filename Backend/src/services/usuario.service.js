@@ -121,6 +121,14 @@ export async function updateUsuarioService(id_usuario, datosActualizados) {
             }
         }
 
+        // Proteger contra cambio de rol del último admin
+        if (datosActualizados.rol && usuario.rol === 'admin' && datosActualizados.rol !== 'admin') {
+            const cantidadAdmins = await usuarioRepo.count({ where: { rol: 'admin' } });
+            if (cantidadAdmins <= 1) {
+                return [null, "No se puede cambiar el rol del último administrador. Debe existir al menos un admin en el sistema."];
+            }
+        }
+
         await usuarioRepo.update({ id_usuario }, datosActualizados);
 
         const usuarioActualizado = await usuarioRepo.findOne({
@@ -148,6 +156,14 @@ export async function deleteUsuarioService(id_usuario) {
         // Proteger al administrador principal
         if (usuario.correo === "admin@museo.cl") {
             return [null, "No se puede eliminar el administrador principal del sistema"];
+        }
+
+        // Verificar si es el último admin
+        if (usuario.rol === 'admin') {
+            const cantidadAdmins = await usuarioRepo.count({ where: { rol: 'admin' } });
+            if (cantidadAdmins <= 1) {
+                return [null, "No se puede eliminar el último administrador del sistema. Debe existir al menos un admin."];
+            }
         }
 
         await usuarioRepo.delete({ id_usuario });

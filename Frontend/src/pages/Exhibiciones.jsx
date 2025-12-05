@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { showToast } from '../utils/toast';
 
 export default function Exhibiciones() {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ export default function Exhibiciones() {
       setFormData({ nombre: '', relato_escrito: '' });
       cargarExhibiciones();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al actualizar la exhibición. Verifica que todos los campos estén correctos.');
+      showToast.error(error.response?.data?.message || 'Error al actualizar la exhibición. Verifica que todos los campos estén correctos.');
     }
   };
 

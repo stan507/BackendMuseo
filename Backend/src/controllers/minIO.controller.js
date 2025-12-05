@@ -99,7 +99,21 @@ export const handleUploadFile = async (req, res) => {
                 });
             }
             
-            const ext = nombreArchivo.toLowerCase().split('.').pop();
+            // Detectar extensiones dobles maliciosas (ej: script.php.jpg)
+            const partes = nombreArchivo.toLowerCase().split('.');
+            if (partes.length > 2) {
+                const extensionesProhibidas = ['php', 'exe', 'bat', 'cmd', 'sh', 'ps1', 'js', 'jar', 'py', 'rb', 'pl', 'asp', 'aspx', 'jsp'];
+                for (let i = 0; i < partes.length - 1; i++) {
+                    if (extensionesProhibidas.includes(partes[i])) {
+                        return res.status(400).json({
+                            message: `Archivo "${nombreArchivo}": extensión doble sospechosa detectada (.${partes[i]}). No se permiten archivos ejecutables.`,
+                            data: null
+                        });
+                    }
+                }
+            }
+            
+            const ext = partes[partes.length - 1];
             if (!extensionesPorTipo[tipo].includes(ext)) {
                 return res.status(400).json({
                     message: `Archivo "${nombreArchivo}": extensión .${ext} no válida para tipo ${tipo}. Extensiones aceptadas: ${extensionesPorTipo[tipo].join(', ')}`,

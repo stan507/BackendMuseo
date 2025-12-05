@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { showToast } from '../utils/toast';
 
 export default function Quizzes() {
   const navigate = useNavigate();
@@ -94,8 +95,8 @@ export default function Quizzes() {
 
   const handleDeleteClick = (quiz, exhibicion) => {
     // Validar que no sea el único quiz de la exhibición
-    if (exhibicion.quizzes.length === 1) {
-      alert('No puedes eliminar el único quiz de esta exhibición. Debe haber al menos un quiz activo.');
+    if (exhibicion.quizzes.length <= 1) {
+      showToast.warning('No puedes eliminar el único quiz de esta exhibición. Debe haber al menos un quiz activo.');
       return;
     }
     setQuizToDelete({ quiz, exhibicion });
@@ -125,7 +126,7 @@ export default function Quizzes() {
       setQuizToDelete(null);
       cargarQuizzesPorExhibicion();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al eliminar el quiz. Verifica que no sea el único activo.');
+      showToast.error(error.response?.data?.message || 'Error al eliminar el quiz. Verifica que no sea el único activo.');
     }
   };
 
@@ -138,7 +139,7 @@ export default function Quizzes() {
       await api.patch(`/quizz/${quiz.id_quizz}/activar`);
       await cargarQuizzesPorExhibicion();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al marcar el quiz como activo');
+      showToast.error(error.response?.data?.message || 'Error al marcar el quiz como activo');
     }
   };
 
@@ -171,32 +172,32 @@ export default function Quizzes() {
     
     // Mismas validaciones que crear
     if (!nuevoQuiz.titulo.trim()) {
-      alert('Error: El título del quiz es obligatorio');
+      showToast.warning('Error: El título del quiz es obligatorio');
       return;
     }
     
     if (nuevoQuiz.preguntas.length === 0) {
-      alert('Debe haber al menos una pregunta');
+      showToast.warning('Debe haber al menos una pregunta');
       return;
     }
 
     for (let i = 0; i < nuevoQuiz.preguntas.length; i++) {
       const pregunta = nuevoQuiz.preguntas[i];
       if (!pregunta.texto_pregunta.trim()) {
-        alert(`La pregunta ${i + 1} no puede estar vacía`);
+        showToast.warning(`La pregunta ${i + 1} no puede estar vacía`);
         return;
       }
       
       const respuestasConTexto = pregunta.respuestas.filter(r => r.texto_respuesta.trim());
       
       if (respuestasConTexto.length < 2) {
-        alert(`Error en pregunta ${i + 1}: Debe tener al menos 2 respuestas con texto`);
+        showToast.warning(`Error en pregunta ${i + 1}: Debe tener al menos 2 respuestas con texto`);
         return;
       }
 
       const correctas = respuestasConTexto.filter(r => r.es_correcta);
       if (correctas.length !== 1) {
-        alert(`La pregunta ${i + 1} debe tener exactamente 1 respuesta correcta`);
+        showToast.warning(`La pregunta ${i + 1} debe tener exactamente 1 respuesta correcta`);
         return;
       }
     }
@@ -206,7 +207,7 @@ export default function Quizzes() {
       const user = userStr ? JSON.parse(userStr) : null;
       
       if (!user || !user.id_usuario) {
-        alert('No se pudo obtener el usuario. Inicia sesión nuevamente.');
+        showToast.error('No se pudo obtener el usuario. Inicia sesión nuevamente.');
         return;
       }
 
@@ -252,7 +253,7 @@ export default function Quizzes() {
       
       await cargarQuizzesPorExhibicion();
       
-      alert('Quiz actualizado exitosamente');
+      showToast.success('Quiz actualizado exitosamente');
     } catch (error) {
       console.error('Error al actualizar quiz:', error);
       console.error('Detalles del error completo:', JSON.stringify(error.response?.data, null, 2));
@@ -261,7 +262,7 @@ export default function Quizzes() {
         ? `Errores de validación:\n${error.response.data.details.join('\n')}`
         : error.response?.data?.message || 'Error al actualizar el quiz';
       
-      alert(errorMsg);
+      showToast.error(errorMsg);
     }
   };
 
@@ -310,7 +311,7 @@ export default function Quizzes() {
 
   const eliminarPregunta = (index) => {
     if (nuevoQuiz.preguntas.length === 1) {
-      alert('Debe haber al menos una pregunta');
+      showToast.warning('Debe haber al menos una pregunta');
       return;
     }
     const nuevasPreguntas = nuevoQuiz.preguntas.filter((_, i) => i !== index);
@@ -342,19 +343,19 @@ export default function Quizzes() {
     
     // Validaciones
     if (!nuevoQuiz.titulo.trim()) {
-      alert('Error: El título del quiz es obligatorio');
+      showToast.warning('Error: El título del quiz es obligatorio');
       return;
     }
     
     if (nuevoQuiz.preguntas.length === 0) {
-      alert('Debe haber al menos una pregunta');
+      showToast.warning('Debe haber al menos una pregunta');
       return;
     }
 
     for (let i = 0; i < nuevoQuiz.preguntas.length; i++) {
       const pregunta = nuevoQuiz.preguntas[i];
       if (!pregunta.texto_pregunta.trim()) {
-        alert(`La pregunta ${i + 1} no puede estar vacía`);
+        showToast.warning(`La pregunta ${i + 1} no puede estar vacía`);
         return;
       }
       
@@ -362,13 +363,13 @@ export default function Quizzes() {
       const respuestasConTexto = pregunta.respuestas.filter(r => r.texto_respuesta.trim());
       
       if (respuestasConTexto.length < 2) {
-        alert(`Error en pregunta ${i + 1}: Debe tener al menos 2 respuestas con texto`);
+        showToast.warning(`Error en pregunta ${i + 1}: Debe tener al menos 2 respuestas con texto`);
         return;
       }
 
       const correctas = respuestasConTexto.filter(r => r.es_correcta);
       if (correctas.length !== 1) {
-        alert(`La pregunta ${i + 1} debe tener exactamente 1 respuesta correcta`);
+        showToast.warning(`La pregunta ${i + 1} debe tener exactamente 1 respuesta correcta`);
         return;
       }
     }
@@ -379,7 +380,7 @@ export default function Quizzes() {
       const user = userStr ? JSON.parse(userStr) : null;
       
       if (!user || !user.id_usuario) {
-        alert('No se pudo obtener el usuario. Inicia sesión nuevamente.');
+        showToast.error('No se pudo obtener el usuario. Inicia sesión nuevamente.');
         return;
       }
 
@@ -433,7 +434,7 @@ export default function Quizzes() {
       // Limpiar exhibición seleccionada al final
       setExhibicionSeleccionada(null);
       
-      alert('Quiz creado exitosamente');
+      showToast.success('Quiz creado exitosamente');
     } catch (error) {
       console.error('Error al crear quiz:', error);
       console.error('Detalles del error completo:', JSON.stringify(error.response?.data, null, 2));
@@ -442,7 +443,7 @@ export default function Quizzes() {
         ? `Errores de validación:\n${error.response.data.details.join('\n')}`
         : error.response?.data?.message || 'Error al crear el quiz';
       
-      alert(errorMsg);
+      showToast.error(errorMsg);
     }
   };
 
@@ -669,7 +670,7 @@ export default function Quizzes() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 px-6 py-4 sticky top-0">
-              <h3 className="text-2xl font-bold text-white">✏️ Editar Quiz</h3>
+              <h3 className="text-2xl font-bold text-white">Editar Quiz</h3>
               <p className="text-yellow-100 text-sm mt-1">
                 Editando quiz para la exhibición seleccionada
               </p>
@@ -753,7 +754,7 @@ export default function Quizzes() {
                             placeholder={`Respuesta ${indexRespuesta + 1} (opcional)`}
                           />
                           {respuesta.es_correcta && (
-                            <span className="text-green-600 font-semibold text-sm">✓ Correcta</span>
+                            <span className="text-green-600 font-semibold text-sm">Correcta</span>
                           )}
                         </div>
                       ))}
@@ -802,7 +803,7 @@ export default function Quizzes() {
             {expandedQuiz === quizToDelete.quiz.id_quizz && quizToDelete.exhibicion.quizzes.length > 1 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-blue-800">
-                  ℹ️ Como este quiz está actualmente desplegado, se seleccionará automáticamente otro quiz.
+                  Como este quiz está actualmente desplegado, se seleccionará automáticamente otro quiz.
                 </p>
               </div>
             )}
@@ -931,7 +932,7 @@ export default function Quizzes() {
                             placeholder={`Respuesta ${indexRespuesta + 1} (opcional)`}
                           />
                           {respuesta.es_correcta && (
-                            <span className="text-green-600 font-semibold text-sm">✓ Correcta</span>
+                            <span className="text-green-600 font-semibold text-sm">Correcta</span>
                           )}
                         </div>
                       ))}

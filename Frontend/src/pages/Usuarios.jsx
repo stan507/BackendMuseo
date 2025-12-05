@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { showToast } from '../utils/toast';
 
 export default function Usuarios() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export default function Usuarios() {
       const usuariosRegistrados = usuarios.filter(user => user.correo !== null && user.correo !== undefined);
       setUsuarios(usuariosRegistrados);
     } catch (error) {
-      alert('Error al cargar la lista de usuarios. Verifica tu conexión.');
+      showToast.error('Error al cargar la lista de usuarios. Verifica tu conexión.');
     } finally {
       setLoading(false);
     }
@@ -39,7 +40,7 @@ export default function Usuarios() {
     // Verificar que no se elimine a sí mismo
     const currentUser = JSON.parse(localStorage.getItem('user'));
     if (currentUser && currentUser.id_usuario === id) {
-      alert('No puedes eliminar tu propia cuenta mientras estás conectado.');
+      showToast.warning('No puedes eliminar tu propia cuenta mientras estás conectado.');
       return;
     }
 
@@ -49,7 +50,7 @@ export default function Usuarios() {
       await api.delete(`/usuario/${id}`);
       cargarUsuarios();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error al eliminar el usuario. Verifica que no sea el administrador principal.');
+      showToast.error(error.response?.data?.message || 'Error al eliminar el usuario. Verifica que no sea el administrador principal.');
     }
   };
 
@@ -66,6 +67,8 @@ export default function Usuarios() {
         // Crear nuevo usuario
         await api.post('/usuario/register', formData);
       }
+      const mensajeExito = editingUser ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente';
+      showToast.success(mensajeExito);
       setShowModal(false);
       setEditingUser(null);
       setFormData({ nombre: '', apellido: '', correo: '', contrasena: '', rol: 'admin' });
@@ -73,7 +76,7 @@ export default function Usuarios() {
     } catch (error) {
       const mensaje = error.response?.data?.message || 
         (editingUser ? 'Error al actualizar el usuario' : 'Error al crear el usuario');
-      alert(mensaje);
+      showToast.error(mensaje);
     }
   };
 

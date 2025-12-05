@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { showToast } from '../utils/toast';
 
 export default function Informes() {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export default function Informes() {
   // Función para cargar estadísticas
   const cargarEstadisticas = async () => {
     if (!filtros.desde || !filtros.hasta) {
-      alert('Selecciona un rango de fechas');
+      showToast.warning('Selecciona un rango de fechas');
       return;
     }
 
@@ -76,7 +77,7 @@ export default function Informes() {
 
       setEstadisticas(response.data.data);
     } catch {
-      alert('Error al cargar estadísticas');
+      showToast.error('Error al cargar estadísticas');
     } finally {
       setLoading(false);
     }
@@ -94,7 +95,7 @@ export default function Informes() {
       const response = await api.get(`/visita/analisis-quiz/${idQuiz}`);
       setAnalisisQuiz(response.data.data);
     } catch {
-      alert('Error al cargar análisis del quiz');
+      showToast.error('Error al cargar análisis del quiz');
     } finally {
       setLoading(false);
     }
@@ -103,7 +104,7 @@ export default function Informes() {
   // Función para descargar PDF
   const descargarPDF = async () => {
     if (!filtros.desde || !filtros.hasta) {
-      alert('Selecciona un rango de fechas');
+      showToast.warning('Selecciona un rango de fechas');
       return;
     }
 
@@ -129,7 +130,7 @@ export default function Informes() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch {
-      alert('Error al generar el PDF');
+      showToast.error('Error al generar el PDF');
     } finally {
       setLoading(false);
     }
@@ -140,7 +141,7 @@ export default function Informes() {
       <header className="bg-white shadow-md border-b-4 border-purple-600">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            📊 Informes y Estadísticas
+            Informes y Estadísticas
           </h1>
           <button
             onClick={() => navigate('/dashboard')}
@@ -154,7 +155,7 @@ export default function Informes() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Panel de Filtros */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">📅 Selecciona el Periodo</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Selecciona el Periodo</h2>
           
           {/* Presets rápidos */}
           <div className="flex flex-wrap gap-3 mb-6">
@@ -162,25 +163,25 @@ export default function Informes() {
               onClick={() => aplicarPreset('hoy')}
               className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium transition"
             >
-              📆 Hoy
+              Hoy
             </button>
             <button
               onClick={() => aplicarPreset('semana')}
               className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 font-medium transition"
             >
-              📅 Última Semana
+              Última Semana
             </button>
             <button
               onClick={() => aplicarPreset('mes')}
               className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 font-medium transition"
             >
-              📊 Último Mes
+              Último Mes
             </button>
             <button
               onClick={() => aplicarPreset('anio')}
               className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 font-medium transition"
             >
-              📈 Último Año
+              Último Año
             </button>
           </div>
 
@@ -214,7 +215,7 @@ export default function Informes() {
                 disabled={loading || !filtros.desde || !filtros.hasta}
                 className="flex-1 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                {loading ? '⏳ Cargando...' : '🔍 Generar Informe'}
+                {loading ? 'Cargando...' : 'Generar Informe'}
               </button>
               <button
                 onClick={descargarPDF}
@@ -233,7 +234,7 @@ export default function Informes() {
             {/* Resumen General */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                📊 Resumen General
+                Resumen General
                 <span className="text-sm font-normal text-gray-500">
                   ({filtros.desde} a {filtros.hasta})
                 </span>
@@ -241,7 +242,7 @@ export default function Informes() {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
-                  <div className="text-blue-600 text-sm font-medium mb-1">📱 Total de Visitas</div>
+                  <div className="text-blue-600 text-sm font-medium mb-1">Total de Visitas</div>
                   <div className="text-3xl font-bold text-blue-700 mb-2">{estadisticas.totalVisitas}</div>
                   <div className="text-xs text-blue-600">
                     Número total de personas que visitaron las exhibiciones en este periodo
@@ -249,7 +250,7 @@ export default function Informes() {
                 </div>
                 
                 <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
-                  <div className="text-green-600 text-sm font-medium mb-1">✅ Completaron Quiz</div>
+                  <div className="text-green-600 text-sm font-medium mb-1">✓ Completaron Quiz</div>
                   <div className="text-3xl font-bold text-green-700 mb-2">{estadisticas.visitasConQuiz}</div>
                   <div className="text-xs text-green-600">
                     Visitantes que respondieron el quiz interactivo y guardaron sus respuestas
@@ -257,7 +258,7 @@ export default function Informes() {
                 </div>
                 
                 <div className="bg-orange-50 rounded-lg p-4 border-2 border-orange-200">
-                  <div className="text-orange-600 text-sm font-medium mb-1">⏭️ Sin Responder Quiz</div>
+                  <div className="text-orange-600 text-sm font-medium mb-1">Sin Responder Quiz</div>
                   <div className="text-3xl font-bold text-orange-700 mb-2">{estadisticas.visitasSinQuiz}</div>
                   <div className="text-xs text-orange-600">
                     Visitantes que no respondieron el quiz o solo vieron la exhibición
@@ -268,7 +269,7 @@ export default function Informes() {
 
             {/* Visitas por Exhibición */}
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">🏛️ Visitas por Exhibición</h3>
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Visitas por Exhibición</h3>
               <div className="space-y-3">
                 {estadisticas.visitasPorExhibicion.map(exhibicion => (
                   <div key={exhibicion.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -278,7 +279,7 @@ export default function Informes() {
                     </div>
                     {exhibicion.duracion_promedio > 0 && (
                       <div className="text-sm text-gray-600">
-                        ⏱️ Duración promedio: {Math.floor(exhibicion.duracion_promedio / 60)} min {exhibicion.duracion_promedio % 60} seg
+                        Duración promedio: {Math.floor(exhibicion.duracion_promedio / 60)} min {exhibicion.duracion_promedio % 60} seg
                       </div>
                     )}
                     {/* Barra de progreso visual */}
@@ -296,23 +297,34 @@ export default function Informes() {
             {/* Distribución de Puntajes de Quizzes */}
             {estadisticas.distribucionPuntajes.length > 0 && (
               <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">🎯 Distribución de Puntajes</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Distribución de Puntajes</h3>
                 <div className="space-y-2">
-                  {estadisticas.distribucionPuntajes.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div className="w-20 text-right">
-                        <span className="font-semibold text-gray-700">{item.puntaje}</span>
-                      </div>
-                      <div className="flex-1 bg-gray-200 rounded-full h-8 relative overflow-hidden">
-                        <div 
-                          className="bg-gradient-to-r from-green-400 to-green-600 h-8 rounded-full flex items-center justify-end pr-3 transition-all"
-                          style={{ width: `${(item.cantidad / estadisticas.visitasConQuiz) * 100}%` }}
-                        >
-                          <span className="text-white font-bold text-sm">{item.cantidad}</span>
+                  <div className="flex items-center gap-3 mb-3 text-sm font-semibold text-gray-600 border-b pb-2">
+                    <div className="w-32 text-center">Aciertos</div>
+                    <div className="w-32 text-center">Total Preguntas</div>
+                    <div className="flex-1 text-center">Cantidad de Visitantes</div>
+                  </div>
+                  {estadisticas.distribucionPuntajes.map((item, idx) => {
+                    const [aciertos, totalPreguntas] = item.puntaje.split('/');
+                    return (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className="w-32 text-center">
+                          <span className="font-bold text-green-600 text-lg">{aciertos}</span>
+                        </div>
+                        <div className="w-32 text-center">
+                          <span className="font-semibold text-gray-700 text-lg">{totalPreguntas}</span>
+                        </div>
+                        <div className="flex-1 bg-gray-200 rounded-full h-8 relative overflow-hidden">
+                          <div 
+                            className="bg-gradient-to-r from-green-400 to-green-600 h-8 rounded-full flex items-center justify-end pr-3 transition-all"
+                            style={{ width: `${(item.cantidad / estadisticas.visitasConQuiz) * 100}%` }}
+                          >
+                            <span className="text-white font-bold text-sm">{item.cantidad}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -368,14 +380,14 @@ export default function Informes() {
                           </div>
                         </div>
                         {esHoraPico && (
-                          <span className="text-amber-600 font-bold text-xs">🔥 PICO</span>
+                          <span className="text-amber-600 font-bold text-xs">HORA PUNTA</span>
                         )}
                       </div>
                     );
                   })}
                 </div>
                 <div className="mt-4 text-xs text-gray-500 text-center">
-                  💡 Las horas destacadas en naranja representan el rango de mayor afluencia
+                  Las horas destacadas en naranja representan el rango de mayor afluencia
                 </div>
               </div>
             )}
@@ -419,7 +431,7 @@ export default function Informes() {
             {/* Preguntas Más Difíciles */}
             {estadisticas.preguntasDificiles && estadisticas.preguntasDificiles.length > 0 && (
               <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">❌ Preguntas con Más Errores</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Preguntas con Más Errores</h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Las preguntas que más visitantes respondieron incorrectamente
                 </p>
@@ -450,7 +462,7 @@ export default function Informes() {
 
         {!estadisticas && !loading && (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <div className="text-6xl mb-4">📊</div>
+            <div className="text-6xl mb-4"></div>
             <h3 className="text-xl font-semibold text-gray-700 mb-2">
               Selecciona un periodo para ver las estadísticas
             </h3>
@@ -463,7 +475,7 @@ export default function Informes() {
         {/* Sección de Análisis Detallado por Quiz */}
         <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            🎯 Análisis Detallado por Quiz
+            Análisis Detallado por Quiz
           </h2>
           <p className="text-gray-600 mb-4">
             Selecciona un quiz para ver el análisis detallado de cada pregunta con los porcentajes de respuesta
@@ -635,7 +647,7 @@ export default function Informes() {
 
           {!analisisQuiz && !loading && !quizSeleccionado && (
             <div className="text-center py-12">
-              <div className="text-5xl mb-3">📝</div>
+              <div className="text-5xl mb-3"></div>
               <p className="text-gray-600">
                 Selecciona un quiz del menú desplegable para ver el análisis detallado
               </p>

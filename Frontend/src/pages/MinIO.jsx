@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { showToast } from '../utils/toast';
 
 export default function MinIO() {
   const navigate = useNavigate();
@@ -94,7 +95,7 @@ export default function MinIO() {
       const response = await api.get('/exhibicion');
       setExhibiciones(response.data.data || []);
     } catch {
-      alert('Error al cargar exhibiciones');
+      showToast.error('Error al cargar exhibiciones');
     }
   };
 
@@ -127,7 +128,7 @@ export default function MinIO() {
         mensajeUsuario = `❌ Error del servidor:\n${errorMsg}\n\nVerifica que MinIO esté corriendo y configurado correctamente.`;
       }
       
-      alert(mensajeUsuario);
+      showToast.error(mensajeUsuario);
     } finally {
       setLoading(false);
     }
@@ -135,12 +136,12 @@ export default function MinIO() {
 
   const handleUpload = async () => {
     if (!archivoSeleccionado) {
-      alert('Selecciona uno o más archivos primero');
+      showToast.warning('Selecciona uno o más archivos primero');
       return;
     }
 
     if (!exhibicionSeleccionada || !tipoArchivo) {
-      alert('Selecciona una exhibición y tipo de archivo primero');
+      showToast.warning('Selecciona una exhibición y tipo de archivo primero');
       return;
     }
 
@@ -156,7 +157,7 @@ export default function MinIO() {
       // Validar extensión
       if (!validarExtension(archivo)) {
         const tipo = tiposArchivo.find(t => t.value === tipoArchivo);
-        alert(`❌ "${archivo.name}" no es válido para ${tipo.label}\n\nExtensiones permitidas: ${tipo.extensiones.join(', ')}`);
+        showToast.error(`"${archivo.name}" no es válido para ${tipo.label}. Extensiones permitidas: ${tipo.extensiones.join(', ')}`);
         return;
       }
 
@@ -210,12 +211,12 @@ export default function MinIO() {
         }
       });
       
-      const mensaje = response.data.message || `✅ ${archivos.length} archivo(s) subido(s)`;
+      const mensaje = response.data.message || `✓ ${archivos.length} archivo(s) subido(s)`;
       
       if (response.data.errores && response.data.errores.length > 0) {
-        alert(`⚠️ ${mensaje}\n\nErrores:\n${response.data.errores.map(e => `- ${e.archivo}: ${e.error}`).join('\n')}`);
+        showToast.warning(`${mensaje}. Errores: ${response.data.errores.map(e => `${e.archivo}: ${e.error}`).join(', ')}`);
       } else {
-        alert(mensaje);
+        showToast.success(mensaje);
       }
       
       setArchivoSeleccionado(null);
@@ -223,7 +224,7 @@ export default function MinIO() {
       cargarArchivos();
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message;
-      alert(`❌ Error al subir archivos:\n${errorMsg}`);
+      showToast.error(`Error al subir archivos: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -237,10 +238,10 @@ export default function MinIO() {
       await api.delete('/museo/file', {
         params: { objectName: fileName }
       });
-      alert('Archivo eliminado');
+      showToast.success('Archivo eliminado');
       cargarArchivos();
     } catch (error) {
-      alert('Error al eliminar archivo');
+      showToast.error('Error al eliminar archivo');
     } finally {
       setLoading(false);
     }
@@ -256,7 +257,7 @@ export default function MinIO() {
     } catch (error) {
       console.error('Error al obtener URL:', error);
       const errorMsg = error.response?.data?.error || error.message;
-      alert(`Error al obtener URL del archivo:\n${errorMsg}`);
+      showToast.error(`Error al obtener URL del archivo: ${errorMsg}`);
     }
   };
 
@@ -283,9 +284,9 @@ export default function MinIO() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error al descargar archivo:', error);
+      console.error('Error al descargar:', error);
       const errorMsg = error.response?.data?.error || error.message;
-      alert(`Error al descargar archivo:\n${errorMsg}`);
+      showToast.error(`Error al descargar archivo: ${errorMsg}`);
     }
   };
 
