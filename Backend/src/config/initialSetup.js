@@ -105,8 +105,8 @@ export async function seedDatabase() {
 
                 const p1 = await preguntaRepo.save({
                     id_quizz: quizHuemul.id_quizz,
-                    titulo: "Habitat del Huemul",
-                    texto: "En que region habita principalmente el huemul?"
+                    titulo: "Hábitat del huemul",
+                    texto: "¿En qué región habita principalmente el huemul?"
                 });
                 await respuestaRepo.save([
                     { id_pregunta: p1.id_pregunta, texto: "Patagonia andina", es_correcta: true },
@@ -116,12 +116,12 @@ export async function seedDatabase() {
 
                 const p2 = await preguntaRepo.save({
                     id_quizz: quizHuemul.id_quizz,
-                    titulo: "Estado de conservacion",
-                    texto: "Cual es el estado de conservacion del huemul?"
+                    titulo: "Estado de conservación",
+                    texto: "¿Cuál es el estado de conservación del huemul?"
                 });
                 await respuestaRepo.save([
-                    { id_pregunta: p2.id_pregunta, texto: "En peligro de extincion", es_correcta: true },
-                    { id_pregunta: p2.id_pregunta, texto: "Preocupacion menor", es_correcta: false },
+                    { id_pregunta: p2.id_pregunta, texto: "En peligro de extinción", es_correcta: true },
+                    { id_pregunta: p2.id_pregunta, texto: "Preocupación menor", es_correcta: false },
                     { id_pregunta: p2.id_pregunta, texto: "Extinto", es_correcta: false }
                 ]);
 

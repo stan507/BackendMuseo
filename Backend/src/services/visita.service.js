@@ -254,9 +254,10 @@ export async function getEstadisticasService(desde, hasta) {
             if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz)) {
                 v.respuestas_quiz.forEach(respuesta => {
                     if (!respuesta.es_correcta) {
-                        const key = respuesta.texto_pregunta || respuesta.id_pregunta;
+                        const key = `${v.id_exhibicion}_${respuesta.texto_pregunta || respuesta.id_pregunta}`;
                         if (!preguntasDificiles[key]) {
                             preguntasDificiles[key] = {
+                                exhibicion: v.exhibicion_nombre || v.id_exhibicion,
                                 texto: respuesta.texto_pregunta || 'Pregunta desconocida',
                                 errores: 0
                             };

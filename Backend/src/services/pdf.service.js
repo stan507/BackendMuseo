@@ -293,8 +293,15 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
         if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz)) {
             v.respuestas_quiz.forEach(respuesta => {
                 if (!respuesta.es_correcta) {
-                    const key = respuesta.texto_pregunta || 'Pregunta desconocida';
-                    preguntasDificiles[key] = (preguntasDificiles[key] || 0) + 1;
+                    const key = `${v.id_exhibicion}_${respuesta.texto_pregunta || 'Pregunta desconocida'}`;
+                    if (!preguntasDificiles[key]) {
+                        preguntasDificiles[key] = {
+                            exhibicion: visitasPorExhibicion[v.id_exhibicion]?.nombre || v.id_exhibicion,
+                            texto: respuesta.texto_pregunta || 'Pregunta desconocida',
+                            errores: 0
+                        };
+                    }
+                    preguntasDificiles[key].errores++;
                 }
             });
         }
@@ -308,8 +315,7 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
         distribucionPuntajes,
         rangoHorarioPico,
         distribucionHoraria,
-        preguntasDificiles: Object.entries(preguntasDificiles)
-            .map(([texto, errores]) => ({ texto, errores }))
+        preguntasDificiles: Object.values(preguntasDificiles)
             .sort((a, b) => b.errores - a.errores)
             .slice(0, 10)
     };
@@ -451,6 +457,8 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
             stats.preguntasDificiles.forEach((pregunta, idx) => {
                 doc.fontSize(11).fillColor('#CC0000');
                 doc.text(`${idx + 1}. [${pregunta.errores} errores]`, { continued: true });
+                doc.fillColor('#0066CC');
+                doc.text(` [${pregunta.exhibicion}]`, { continued: true });
                 doc.fillColor('#000000');
                 doc.text(` ${pregunta.texto}`);
                 doc.moveDown(0.5);
@@ -497,7 +505,7 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
                             doc.addPage();
                         }
                         
-                        doc.fontSize(14).fillColor('#5B21B6').text(`Pregunta ${idx + 1}`, { underline: true });
+                        doc.fontSize(14).fillColor('#5B21B6').text(`${idx + 1})`, { underline: true });
                         doc.moveDown(0.3);
                         doc.fontSize(12).fillColor('#000000').text(pregunta.enunciado, { width: 500 });
                         doc.fontSize(10).fillColor('#666666').text(`(${pregunta.total_respuestas} respuestas totales)`, { width: 500 });

@@ -440,9 +440,14 @@ export default function Informes() {
                     <div key={idx} className="bg-red-50 rounded-lg p-4 border-l-4 border-red-500">
                       <div className="flex justify-between items-start gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-2">
                             <span className="text-red-600 font-bold text-lg">#{idx + 1}</span>
                             <span className="text-sm text-gray-500">({pregunta.errores} {pregunta.errores === 1 ? 'error' : 'errores'})</span>
+                            {pregunta.exhibicion && (
+                              <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded">
+                                {pregunta.exhibicion}
+                              </span>
+                            )}
                           </div>
                           <p className="text-gray-800">{pregunta.texto}</p>
                         </div>
