@@ -99,7 +99,7 @@ export async function seedDatabase() {
                     id_usuario: admin.id_usuario,
                     id_exhibicion: "huemul",
                     titulo: "Quiz sobre el Huemul",
-                    cant_preguntas: 2,
+                    cant_preguntas: 3,
                     es_activo: true
                 });
 
@@ -436,30 +436,50 @@ export async function seedDatabase() {
         if (respondeCount === 0 && quizzCountActual > 0 && admin) {
             console.log("Insertando respuestas de ejemplo...");
             
-            await respondeRepo.save([
-                { id_usuario: admin.id_usuario, id_quizz: 1, correctas: 3, tiempo_segundos: 45 },
-                { id_usuario: admin.id_usuario, id_quizz: 2, correctas: 2, tiempo_segundos: 35 },
-                { id_usuario: admin.id_usuario, id_quizz: 3, correctas: 2, tiempo_segundos: 50 },
-                { id_usuario: admin.id_usuario, id_quizz: 4, correctas: 2, tiempo_segundos: 30 }
-            ]);
+            // Obtener preguntas de cada quiz para generar respuestas_detalle realistas
+            const quizzes = await quizzRepo.find({ relations: ["preguntas", "preguntas.respuestas"] });
             
-            console.log("  Se insertaron 4 respuestas de ejemplo.");
+            const respuestasEjemplo = [];
+            
+            for (const quiz of quizzes) {
+                if (quiz.preguntas && quiz.preguntas.length > 0) {
+                    const respuestasDetalle = quiz.preguntas.map((pregunta, index) => {
+                        // Simular que acierta 2-3 de cada quiz
+                        const respuestaCorrecta = pregunta.respuestas.find(r => r.es_correcta);
+                        const respuestaIncorrecta = pregunta.respuestas.find(r => !r.es_correcta);
+                        const esCorrecta = index < 2; // Primeras 2 correctas
+                        const respuestaSeleccionada = esCorrecta ? respuestaCorrecta : respuestaIncorrecta;
+                        
+                        return {
+                            id_pregunta: pregunta.id_pregunta,
+                            id_respuesta_seleccionada: respuestaSeleccionada?.id_respuesta || 0,
+                            es_correcta: esCorrecta,
+                            texto_pregunta: pregunta.titulo,
+                            texto_respuesta: respuestaSeleccionada?.texto || "Sin respuesta"
+                        };
+                    });
+                    
+                    const correctas = respuestasDetalle.filter(r => r.es_correcta).length;
+                    
+                    respuestasEjemplo.push({
+                        id_usuario: admin.id_usuario,
+                        id_quizz: quiz.id_quizz,
+                        correctas: correctas,
+                        tiempo_segundos: 30 + (quiz.cant_preguntas * 10),
+                        respuestas_detalle: respuestasDetalle
+                    });
+                }
+            }
+            
+            if (respuestasEjemplo.length > 0) {
+                await respondeRepo.save(respuestasEjemplo);
+                console.log(`  Se insertaron ${respuestasEjemplo.length} respuestas de ejemplo con detalles completos.`);
+            }
         } else {
             console.log(`  Ya existen ${respondeCount} respuesta(s).`);
         }
 
-        // 6. MIGRACION: Agregar columna quiz_iniciado si no existe
-        try {
-            await AppDataSource.query(`
-                ALTER TABLE visita 
-                ADD COLUMN IF NOT EXISTS quiz_iniciado BOOLEAN DEFAULT NULL
-            `);
-            console.log("  Columna 'quiz_iniciado' verificada/creada en tabla visita.");
-        } catch (error) {
-            console.log("  Columna 'quiz_iniciado' ya existe o error:", error.message);
-        }
-
-        // 7. VALIDACION DE ARCHIVOS EN MINIO
+        // 6. VALIDACION DE ARCHIVOS EN MINIO
         console.log("Verificando archivos en MinIO...");
         await verificarArchivosMinIO();
 

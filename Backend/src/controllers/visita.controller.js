@@ -7,7 +7,6 @@ import {
     getVisitasByExhibicionService,
     getEstadisticasService,
     getAnalisisQuizService,
-    updateQuizEstadoService,
     getEmbudoConversionService
 } from "../services/visita.service.js";
 
@@ -46,13 +45,11 @@ export async function createVisita(req, res) {
 export async function updateDuracionVisita(req, res) {
     try {
         const { id } = req.params;
-        const { duracion_segundos, puntaje_quiz, respuestas_quiz } = req.body;
+        const { duracion_segundos } = req.body;
 
         const [visita, error] = await updateDuracionVisitaService(
             parseInt(id), 
-            duracion_segundos,
-            puntaje_quiz,
-            respuestas_quiz
+            duracion_segundos
         );
 
         if (error) {
@@ -67,9 +64,7 @@ export async function updateDuracionVisita(req, res) {
             message: "Visita actualizada exitosamente",
             data: {
                 id_visita: visita.id_visita,
-                duracion_segundos: visita.duracion_segundos,
-                puntaje_quiz: visita.puntaje_quiz,
-                respuestas_guardadas: visita.respuestas_quiz ? visita.respuestas_quiz.length : 0
+                duracion_segundos: visita.duracion_segundos
             }
         });
     } catch (error) {
@@ -196,37 +191,6 @@ export async function getAnalisisQuiz(req, res) {
         });
     } catch (error) {
         console.error("Error en getAnalisisQuiz:", error);
-        res.status(500).json({ message: "Error interno del servidor" });
-    }
-}
-
-/**
- * PATCH /api/visita/:id/quiz-estado - Actualizar estado del quiz (iniciado/abandonado)
- */
-export async function updateQuizEstado(req, res) {
-    try {
-        const { id } = req.params;
-        const { quiz_iniciado } = req.body;
-
-        if (quiz_iniciado === undefined) {
-            return res.status(400).json({ 
-                message: "El campo quiz_iniciado es requerido" 
-            });
-        }
-
-        const [visita, error] = await updateQuizEstadoService(parseInt(id), quiz_iniciado);
-
-        if (error) {
-            const statusCode = error === "Visita no encontrada" ? 404 : 500;
-            return res.status(statusCode).json({ message: error });
-        }
-
-        res.status(200).json({
-            message: "Estado del quiz actualizado exitosamente",
-            data: visita
-        });
-    } catch (error) {
-        console.error("Error en updateQuizEstado:", error);
         res.status(500).json({ message: "Error interno del servidor" });
     }
 }

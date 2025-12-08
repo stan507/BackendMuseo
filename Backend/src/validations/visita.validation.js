@@ -28,27 +28,6 @@ export const updateDuracionSchema = Joi.object({
             "number.integer": "La duración debe ser un número entero",
             "number.min": "La duración no puede ser negativa",
             "any.required": "La duración es requerida"
-        }),
-    puntaje_quiz: Joi.number()
-        .integer()
-        .min(0)
-        .optional()
-        .allow(null)
-        .messages({
-            "number.base": "El puntaje debe ser un número",
-            "number.integer": "El puntaje debe ser un número entero",
-            "number.min": "El puntaje no puede ser negativo"
-        }),
-    respuestas_quiz: Joi.array()
-        .items(Joi.object({
-            id_pregunta: Joi.number().integer().required(),
-            id_respuesta_seleccionada: Joi.number().integer().required(),
-            es_correcta: Joi.boolean().required()
-        }))
-        .optional()
-        .allow(null)
-        .messages({
-            "array.base": "Las respuestas deben ser un array"
         })
 });
 

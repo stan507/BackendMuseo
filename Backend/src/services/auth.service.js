@@ -55,3 +55,51 @@ export async function loginService(correo, password) {
         return [null, "Error interno del servidor"];
     }
 }
+
+export async function deviceLoginService(device_id) {
+    try {
+        const usuarioRepo = AppDataSource.getRepository(Usuario);
+        
+        // Buscar usuario por device_id (usando el campo correo con formato especial)
+        const emailDispositivo = `device_${device_id}@museo.local`;
+        let usuario = await usuarioRepo.findOne({ 
+            where: { correo: emailDispositivo } 
+        });
+        
+        // Si no existe, crear uno nuevo automáticamente
+        if (!usuario) {
+            usuario = await usuarioRepo.save({
+                correo: emailDispositivo,
+                nombre: `Dispositivo ${device_id.substring(0, 8)}`,
+                rol: "visitante",
+                contrasena: null // Sin contraseña para dispositivos
+            });
+            console.log(`Nuevo dispositivo registrado: ${device_id}`);
+        }
+        
+        // Generar JWT
+        const token = jwt.sign(
+            { 
+                id_usuario: usuario.id_usuario, 
+                rol: usuario.rol,
+                device_id: device_id
+            },
+            JWT_SECRET,
+            { expiresIn: "30d" } // Token más largo para dispositivos
+        );
+        
+        return [{ 
+            token, 
+            usuario: { 
+                id_usuario: usuario.id_usuario,
+                correo: usuario.correo, 
+                nombre: usuario.nombre,
+                rol: usuario.rol,
+                device_id: device_id
+            } 
+        }, null];
+    } catch (error) {
+        console.error("Error en deviceLoginService:", error);
+        return [null, "Error interno del servidor"];
+    }
+}

@@ -37,6 +37,19 @@ export const createRespondeSchema = Joi.object({
             "number.base": "El tiempo debe ser un número",
             "number.integer": "El tiempo debe ser un número entero",
             "number.min": "El tiempo no puede ser negativo"
+        }),
+    respuestas_detalle: Joi.array()
+        .items(Joi.object({
+            id_pregunta: Joi.number().integer().required(),
+            id_respuesta_seleccionada: Joi.number().integer().required(),
+            es_correcta: Joi.boolean().required(),
+            texto_pregunta: Joi.string().required(),
+            texto_respuesta: Joi.string().optional()
+        }))
+        .optional()
+        .allow(null)
+        .messages({
+            "array.base": "Las respuestas_detalle deben ser un array"
         })
 });
 

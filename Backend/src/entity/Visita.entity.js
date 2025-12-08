@@ -29,23 +29,6 @@ export const Visita = new EntitySchema({
             nullable: true,
             default: null,
         },
-        puntaje_quiz: {
-            type: "int",
-            nullable: true,
-            default: null,
-        },
-        respuestas_quiz: {
-            type: "jsonb",
-            nullable: true,
-            default: null,
-            comment: "Array de objetos con {id_pregunta, id_respuesta_seleccionada, es_correcta, texto_pregunta}"
-        },
-        quiz_iniciado: {
-            type: "boolean",
-            nullable: true,
-            default: null,
-            comment: "Indica si el usuario abrio el quiz (true=inicio, false=abandono, null=no inicio)"
-        },
     },
     relations: {
         usuario: {

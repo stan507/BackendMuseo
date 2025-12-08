@@ -1,5 +1,5 @@
 "use strict";
-import { loginService } from "../services/auth.service.js";
+import { loginService, deviceLoginService } from "../services/auth.service.js";
 
 export async function login(req, res) {
     try {
@@ -20,6 +20,31 @@ export async function login(req, res) {
         res.status(200).json(result);
     } catch (error) {
         console.error("Error en login:", error);
+        res.status(500).json({ 
+            message: "Error interno del servidor" 
+        });
+    }
+}
+
+export async function deviceLogin(req, res) {
+    try {
+        const { device_id } = req.body;
+        
+        if (!device_id) {
+            return res.status(400).json({ 
+                message: "device_id es requerido" 
+            });
+        }
+        
+        const [result, error] = await deviceLoginService(device_id);
+        
+        if (error) {
+            return res.status(500).json({ message: error });
+        }
+        
+        res.status(200).json(result);
+    } catch (error) {
+        console.error("Error en deviceLogin:", error);
         res.status(500).json({ 
             message: "Error interno del servidor" 
         });

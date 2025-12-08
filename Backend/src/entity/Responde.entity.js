@@ -28,6 +28,12 @@ export const Responde = new EntitySchema({
             nullable: true,
             default: null,
         },
+        respuestas_detalle: {
+            type: "jsonb",
+            nullable: true,
+            default: null,
+            comment: "Array de objetos con {id_pregunta, id_respuesta_seleccionada, es_correcta, texto_pregunta, texto_respuesta}"
+        },
         fecha_responde: {
             type: "timestamp",
             nullable: false,

@@ -22,7 +22,7 @@ export async function createVisitaService(id_usuario, id_exhibicion) {
     }
 }
 
-export async function updateDuracionVisitaService(id_visita, duracion_segundos, puntaje_quiz = null, respuestas_quiz = null) {
+export async function updateDuracionVisitaService(id_visita, duracion_segundos) {
     try {
         const visitaRepo = AppDataSource.getRepository(Visita);
 
@@ -33,43 +33,11 @@ export async function updateDuracionVisitaService(id_visita, duracion_segundos, 
         }
 
         visita.duracion_segundos = duracion_segundos;
-        
-        // Actualizar puntaje y respuestas del quiz si se proporcionan
-        if (puntaje_quiz !== null) {
-            visita.puntaje_quiz = puntaje_quiz;
-        }
-        if (respuestas_quiz !== null) {
-            visita.respuestas_quiz = respuestas_quiz;
-        }
-        
         const visitaActualizada = await visitaRepo.save(visita);
 
         return [visitaActualizada, null];
     } catch (error) {
         console.error("Error en updateDuracionVisitaService:", error);
-        return [null, "Error interno del servidor"];
-    }
-}
-
-/**
- * Marcar que el quiz fue iniciado o abandonado
- */
-export async function updateQuizEstadoService(id_visita, quiz_iniciado) {
-    try {
-        const visitaRepo = AppDataSource.getRepository(Visita);
-
-        const visita = await visitaRepo.findOne({ where: { id_visita } });
-
-        if (!visita) {
-            return [null, "Visita no encontrada"];
-        }
-
-        visita.quiz_iniciado = quiz_iniciado;
-        const visitaActualizada = await visitaRepo.save(visita);
-
-        return [visitaActualizada, null];
-    } catch (error) {
-        console.error("Error en updateQuizEstadoService:", error);
         return [null, "Error interno del servidor"];
     }
 }
@@ -141,30 +109,45 @@ export async function getVisitasByExhibicionService(id_exhibicion) {
  */
 export async function getEstadisticasService(desde, hasta) {
     try {
-        // Query para obtener visitas en el rango de fechas con puntajes de quizzes
+        // Query para obtener visitas en el rango de fechas
         const queryVisitas = `
             SELECT 
                 v.id_visita,
                 v.fecha_visita,
                 v.duracion_segundos,
                 v.id_exhibicion,
-                e.nombre as exhibicion_nombre,
-                COALESCE(v.puntaje_quiz, 0) as puntaje_quiz,
-                COALESCE(q.cant_preguntas, 0) as preguntas_totales,
-                v.respuestas_quiz,
-                q.titulo as quiz_titulo
+                e.nombre as exhibicion_nombre
             FROM visita v
             LEFT JOIN exhibicion e ON v.id_exhibicion = e.id_exhibicion
-            LEFT JOIN quizz q ON v.id_exhibicion = q.id_exhibicion AND q.es_activo = true
             WHERE v.fecha_visita >= $1 AND v.fecha_visita <= $2
             ORDER BY v.fecha_visita DESC
         `;
 
         const visitas = await AppDataSource.query(queryVisitas, [desde, hasta + ' 23:59:59']);
 
+        // Query para obtener respuestas de quizzes en el mismo rango
+        const queryResponde = `
+            SELECT 
+                r.id_responde,
+                r.id_usuario,
+                r.id_quizz,
+                r.correctas,
+                r.tiempo_segundos,
+                r.respuestas_detalle,
+                r.fecha_responde,
+                q.cant_preguntas,
+                q.titulo as quiz_titulo
+            FROM responde r
+            LEFT JOIN quizz q ON r.id_quizz = q.id_quizz
+            WHERE r.fecha_responde >= $1 AND r.fecha_responde <= $2
+            ORDER BY r.fecha_responde DESC
+        `;
+
+        const respuestas = await AppDataSource.query(queryResponde, [desde, hasta + ' 23:59:59']);
+
         // Calcular estadísticas generales
         const totalVisitas = visitas.length;
-        const visitasConQuiz = visitas.filter(v => v.puntaje_quiz !== null && v.puntaje_quiz > 0).length;
+        const visitasConQuiz = respuestas.length;
         
         // Estadísticas por exhibición
         const visitasPorExhibicion = {};
@@ -195,9 +178,9 @@ export async function getEstadisticasService(desde, hasta) {
 
         // Distribución de puntajes de quizzes (cuántos usuarios obtuvieron X/Y)
         const distribucionPuntajes = {};
-        visitas.forEach(v => {
-            if (v.puntaje_quiz !== null && v.puntaje_quiz > 0 && v.preguntas_totales > 0) {
-                const key = `${v.puntaje_quiz}/${v.preguntas_totales}`;
+        respuestas.forEach(r => {
+            if (r.correctas !== null && r.correctas >= 0 && r.cant_preguntas > 0) {
+                const key = `${r.correctas}/${r.cant_preguntas}`;
                 distribucionPuntajes[key] = (distribucionPuntajes[key] || 0) + 1;
             }
         });
@@ -244,34 +227,39 @@ export async function getEstadisticasService(desde, hasta) {
                 visitas: visitasPorHora[hora]
             }));
 
-        // Analizar preguntas más difíciles (más errores)
+        // Analizar preguntas más difíciles (más errores) desde responde
         const preguntasDificiles = {};
-        const preguntasCache = {}; // Cache para no consultar la misma pregunta múltiples veces
+        const preguntasCache = {};
         
-        for (const v of visitas) {
-            if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz) && v.respuestas_quiz.length > 0) {
-                for (const respuesta of v.respuestas_quiz) {
+        for (const r of respuestas) {
+            if (r.respuestas_detalle && Array.isArray(r.respuestas_detalle) && r.respuestas_detalle.length > 0) {
+                for (const respuesta of r.respuestas_detalle) {
                     if (!respuesta.es_correcta && respuesta.id_pregunta) {
-                        const key = `${v.id_exhibicion}_${respuesta.id_pregunta}`;
+                        const key = `${r.id_quizz}_${respuesta.id_pregunta}`;
                         
                         if (!preguntasDificiles[key]) {
-                            // Obtener información de la pregunta desde la base de datos
                             let preguntaInfo = preguntasCache[respuesta.id_pregunta];
                             
                             if (!preguntaInfo) {
                                 const queryPregunta = `
-                                    SELECT p.titulo, p.texto, q.titulo as quiz_titulo
+                                    SELECT p.titulo, p.texto, q.titulo as quiz_titulo, q.id_exhibicion, e.nombre as exhibicion_nombre
                                     FROM pregunta p
                                     JOIN quizz q ON p.id_quizz = q.id_quizz
+                                    JOIN exhibicion e ON q.id_exhibicion = e.id_exhibicion
                                     WHERE p.id_pregunta = $1
                                 `;
                                 const [preguntaData] = await AppDataSource.query(queryPregunta, [respuesta.id_pregunta]);
-                                preguntaInfo = preguntaData || { titulo: 'Sin título', texto: 'Pregunta desconocida', quiz_titulo: 'Quiz desconocido' };
+                                preguntaInfo = preguntaData || { 
+                                    titulo: 'Sin título', 
+                                    texto: 'Pregunta desconocida', 
+                                    quiz_titulo: 'Quiz desconocido',
+                                    exhibicion_nombre: 'Desconocida'
+                                };
                                 preguntasCache[respuesta.id_pregunta] = preguntaInfo;
                             }
                             
                             preguntasDificiles[key] = {
-                                exhibicion: v.exhibicion_nombre || v.id_exhibicion,
+                                exhibicion: preguntaInfo.exhibicion_nombre,
                                 quiz_titulo: preguntaInfo.quiz_titulo,
                                 titulo_pregunta: preguntaInfo.titulo,
                                 texto: preguntaInfo.texto,
@@ -314,32 +302,32 @@ export async function getEstadisticasService(desde, hasta) {
 
 /**
  * Obtener embudo de conversión (funnel)
- * Muestra el recorrido: visitaron → abrieron quiz → completaron quiz
+ * Muestra el recorrido: visitaron → respondieron quiz
  */
 export async function getEmbudoConversionService(desde, hasta) {
     try {
-        const query = `
-            SELECT 
-                COUNT(*) as total_visitas,
-                COUNT(CASE WHEN quiz_iniciado = true THEN 1 END) as quiz_abiertos,
-                COUNT(CASE WHEN puntaje_quiz IS NOT NULL THEN 1 END) as quiz_completados,
-                COUNT(CASE WHEN quiz_iniciado = true AND puntaje_quiz IS NULL THEN 1 END) as quiz_abandonados
+        // Contar total de visitas
+        const queryVisitas = `
+            SELECT COUNT(*) as total_visitas
             FROM visita
             WHERE fecha_visita >= $1 AND fecha_visita <= $2
         `;
         
-        const resultado = await AppDataSource.query(query, [desde, hasta + ' 23:59:59']);
-        const datos = resultado[0];
+        // Contar quizzes completados desde responde
+        const queryResponde = `
+            SELECT COUNT(*) as quiz_completados
+            FROM responde
+            WHERE fecha_responde >= $1 AND fecha_responde <= $2
+        `;
         
-        const totalVisitas = parseInt(datos.total_visitas);
-        const quizAbiertos = parseInt(datos.quiz_abiertos);
-        const quizCompletados = parseInt(datos.quiz_completados);
-        const quizAbandonados = parseInt(datos.quiz_abandonados);
+        const resultadoVisitas = await AppDataSource.query(queryVisitas, [desde, hasta + ' 23:59:59']);
+        const resultadoResponde = await AppDataSource.query(queryResponde, [desde, hasta + ' 23:59:59']);
         
-        // Calcular tasas de conversión
-        const tasaApertura = totalVisitas > 0 ? ((quizAbiertos / totalVisitas) * 100).toFixed(2) : 0;
-        const tasaComplecion = quizAbiertos > 0 ? ((quizCompletados / quizAbiertos) * 100).toFixed(2) : 0;
-        const tasaAbandonoGeneral = totalVisitas > 0 ? ((quizAbandonados / totalVisitas) * 100).toFixed(2) : 0;
+        const totalVisitas = parseInt(resultadoVisitas[0].total_visitas);
+        const quizCompletados = parseInt(resultadoResponde[0].quiz_completados);
+        
+        // Calcular tasa de conversión
+        const tasaComplecion = totalVisitas > 0 ? ((quizCompletados / totalVisitas) * 100).toFixed(2) : 0;
         
         return [{
             embudo: [
@@ -350,26 +338,16 @@ export async function getEmbudoConversionService(desde, hasta) {
                     descripcion: 'Usuarios que accedieron a alguna exhibición'
                 },
                 {
-                    etapa: 'Abrieron quiz',
-                    cantidad: quizAbiertos,
-                    porcentaje: parseFloat(tasaApertura),
-                    descripcion: 'Usuarios que hicieron clic en el botón del quiz'
-                },
-                {
                     etapa: 'Completaron quiz',
                     cantidad: quizCompletados,
-                    porcentaje: totalVisitas > 0 ? ((quizCompletados / totalVisitas) * 100).toFixed(2) : 0,
-                    descripcion: 'Usuarios que terminaron y enviaron el quiz'
+                    porcentaje: parseFloat(tasaComplecion),
+                    descripcion: 'Usuarios que respondieron y enviaron el quiz'
                 }
             ],
             metricas: {
                 totalVisitas,
-                quizAbiertos,
                 quizCompletados,
-                quizAbandonados,
-                tasaApertura: parseFloat(tasaApertura),
-                tasaComplecion: parseFloat(tasaComplecion),
-                tasaAbandonoGeneral: parseFloat(tasaAbandonoGeneral)
+                tasaComplecion: parseFloat(tasaComplecion)
             }
         }, null];
     } catch (error) {
@@ -438,22 +416,19 @@ export async function getAnalisisQuizService(id_quiz) {
             }
         });
 
-        // Obtener todas las visitas que respondieron este quiz
-        const queryVisitas = `
+        // Obtener todas las respuestas de este quiz desde tabla responde
+        const queryResponde = `
             SELECT 
-                v.id_visita,
-                v.puntaje_quiz,
-                v.respuestas_quiz,
-                v.fecha_visita
-            FROM visita v
-            LEFT JOIN exhibicion e ON v.id_exhibicion = e.id_exhibicion
-            LEFT JOIN quizz q ON e.id_exhibicion = q.id_exhibicion
-            WHERE q.id_quizz = $1 
-            AND v.respuestas_quiz IS NOT NULL
-            AND v.puntaje_quiz IS NOT NULL
+                r.id_responde,
+                r.correctas,
+                r.respuestas_detalle,
+                r.fecha_responde
+            FROM responde r
+            WHERE r.id_quizz = $1 
+            AND r.respuestas_detalle IS NOT NULL
         `;
 
-        const visitas = await AppDataSource.query(queryVisitas, [id_quiz]);
+        const respuestas = await AppDataSource.query(queryResponde, [id_quiz]);
 
         // Contar respuestas por pregunta
         const estadisticasPorPregunta = {};
@@ -471,10 +446,10 @@ export async function getAnalisisQuizService(id_quiz) {
             });
         });
 
-        // Contar las respuestas de los usuarios
-        visitas.forEach(visita => {
-            if (visita.respuestas_quiz && Array.isArray(visita.respuestas_quiz)) {
-                visita.respuestas_quiz.forEach(respuesta => {
+        // Contar las respuestas de los usuarios desde responde
+        respuestas.forEach(responde => {
+            if (responde.respuestas_detalle && Array.isArray(responde.respuestas_detalle)) {
+                responde.respuestas_detalle.forEach(respuesta => {
                     const idPregunta = respuesta.id_pregunta;
                     const idRespuestaSeleccionada = respuesta.id_respuesta_seleccionada;
                     
@@ -524,7 +499,7 @@ export async function getAnalisisQuizService(id_quiz) {
                 cant_preguntas: quiz[0].cant_preguntas,
                 exhibicion: quiz[0].exhibicion_nombre
             },
-            total_participantes: visitas.length,
+            total_participantes: respuestas.length,
             analisis_preguntas: analisis
         }, null];
 

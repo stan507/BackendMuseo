@@ -8,7 +8,6 @@ import {
     getVisitasByExhibicion,
     getEstadisticas,
     getAnalisisQuiz,
-    updateQuizEstado,
     getEmbudoConversion
 } from "../controllers/visita.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
@@ -45,8 +44,5 @@ router.post("/", authenticate, validate(createVisitaSchema, "body"), createVisit
 
 // PUT actualizar duracion
 router.put("/:id", authenticate, validate(updateDuracionSchema, "body"), updateDuracionVisita);
-
-// PATCH actualizar estado del quiz
-router.patch("/:id/quiz-estado", authenticate, updateQuizEstado);
 
 export default router;

@@ -275,8 +275,11 @@ export async function updateQuizzService(id_quizz, id_exhibicion, titulo, pregun
             return [null, "Quiz no encontrado"];
         }
         
-        // 2. Eliminar preguntas antiguas (cascade eliminará respuestas)
-        await preguntaRepo.delete({ id_quizz });
+        // 2. Obtener preguntas existentes
+        const preguntasExistentes = await preguntaRepo.find({ 
+            where: { id_quizz },
+            relations: ['respuestas']
+        });
         
         // 3. Actualizar quiz
         await quizzRepo.update({ id_quizz }, {
@@ -285,20 +288,45 @@ export async function updateQuizzService(id_quizz, id_exhibicion, titulo, pregun
             cant_preguntas: preguntas.length
         });
         
-        // 4. Crear nuevas preguntas y respuestas
-        for (const preguntaData of preguntas) {
-            const nuevaPregunta = await preguntaRepo.save({
-                id_quizz,
-                titulo: preguntaData.titulo,
-                texto: preguntaData.texto
-            });
+        // 4. Actualizar o crear preguntas (preservando IDs cuando sea posible)
+        for (let i = 0; i < preguntas.length; i++) {
+            const preguntaData = preguntas[i];
+            let preguntaActual;
             
+            if (preguntasExistentes[i]) {
+                // Actualizar pregunta existente (preserva el ID)
+                await preguntaRepo.update(preguntasExistentes[i].id_pregunta, {
+                    titulo: preguntaData.titulo,
+                    texto: preguntaData.texto
+                });
+                preguntaActual = preguntasExistentes[i];
+                
+                // Eliminar respuestas antiguas de esta pregunta
+                await respuestaRepo.delete({ id_pregunta: preguntaActual.id_pregunta });
+            } else {
+                // Crear nueva pregunta si hay más preguntas que antes
+                preguntaActual = await preguntaRepo.save({
+                    id_quizz,
+                    titulo: preguntaData.titulo,
+                    texto: preguntaData.texto
+                });
+            }
+            
+            // Crear nuevas respuestas
             for (const respuestaData of preguntaData.respuestas) {
                 await respuestaRepo.save({
-                    id_pregunta: nuevaPregunta.id_pregunta,
+                    id_pregunta: preguntaActual.id_pregunta,
                     texto: respuestaData.texto,
                     es_correcta: respuestaData.es_correcta
                 });
+            }
+        }
+        
+        // 5. Eliminar preguntas sobrantes si se redujeron
+        if (preguntasExistentes.length > preguntas.length) {
+            const preguntasAEliminar = preguntasExistentes.slice(preguntas.length);
+            for (const pregunta of preguntasAEliminar) {
+                await preguntaRepo.delete(pregunta.id_pregunta);
             }
         }
         
