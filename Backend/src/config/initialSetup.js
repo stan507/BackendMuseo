@@ -436,18 +436,55 @@ export async function seedDatabase() {
         if (respondeCount === 0 && quizzCountActual > 0 && admin) {
             console.log("Insertando respuestas de ejemplo...");
             
-            // Obtener preguntas de cada quiz para generar respuestas_detalle realistas
-            const quizzes = await quizzRepo.find({ relations: ["preguntas", "preguntas.respuestas"] });
+            // Obtener todos los quizzes
+            const quizzes = await quizzRepo.find();
             
             const respuestasEjemplo = [];
             
             for (const quiz of quizzes) {
-                if (quiz.preguntas && quiz.preguntas.length > 0) {
-                    const respuestasDetalle = quiz.preguntas.map((pregunta, index) => {
-                        // Simular que acierta 2-3 de cada quiz
+                // Query manual para obtener preguntas y respuestas
+                const preguntasQuery = `
+                    SELECT 
+                        p.id_pregunta,
+                        p.titulo,
+                        r.id_respuesta,
+                        r.texto as respuesta_texto,
+                        r.es_correcta
+                    FROM pregunta p
+                    LEFT JOIN respuesta r ON p.id_pregunta = r.id_pregunta
+                    WHERE p.id_quizz = $1
+                    ORDER BY p.id_pregunta, r.id_respuesta
+                `;
+                
+                const preguntasRaw = await AppDataSource.query(preguntasQuery, [quiz.id_quizz]);
+                
+                // Organizar preguntas con sus respuestas
+                const preguntasMap = {};
+                preguntasRaw.forEach(row => {
+                    if (!preguntasMap[row.id_pregunta]) {
+                        preguntasMap[row.id_pregunta] = {
+                            id_pregunta: row.id_pregunta,
+                            titulo: row.titulo,
+                            respuestas: []
+                        };
+                    }
+                    if (row.id_respuesta) {
+                        preguntasMap[row.id_pregunta].respuestas.push({
+                            id_respuesta: row.id_respuesta,
+                            texto: row.respuesta_texto,
+                            es_correcta: row.es_correcta
+                        });
+                    }
+                });
+                
+                const preguntas = Object.values(preguntasMap);
+                
+                if (preguntas.length > 0) {
+                    const respuestasDetalle = preguntas.map((pregunta, index) => {
+                        // Simular que acierta las primeras 2 preguntas
                         const respuestaCorrecta = pregunta.respuestas.find(r => r.es_correcta);
                         const respuestaIncorrecta = pregunta.respuestas.find(r => !r.es_correcta);
-                        const esCorrecta = index < 2; // Primeras 2 correctas
+                        const esCorrecta = index < 2;
                         const respuestaSeleccionada = esCorrecta ? respuestaCorrecta : respuestaIncorrecta;
                         
                         return {
