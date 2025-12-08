@@ -71,6 +71,7 @@ export async function deviceLoginService(device_id) {
             usuario = await usuarioRepo.save({
                 correo: emailDispositivo,
                 nombre: `Dispositivo ${device_id.substring(0, 8)}`,
+                apellido: "Anónimo", // Apellido por defecto para dispositivos
                 rol: "visitante",
                 contrasena: null // Sin contraseña para dispositivos
             });
