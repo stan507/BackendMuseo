@@ -101,15 +101,19 @@ export default function Informes() {
     }
   };
 
-  // Función para descargar PDF
+  // Descargar PDF
   const descargarPDF = async () => {
+    console.log('=== DESCARGANDO PDF ===');
     if (!filtros.desde || !filtros.hasta) {
       showToast.warning('Selecciona un rango de fechas');
       return;
     }
 
+    console.log('Filtros:', filtros);
+    console.log('Quizzes para PDF:', quizzesParaPDF);
     setLoading(true);
     try {
+      console.log('Enviando request a /informe/pdf...');
       const response = await api.get('/informe/pdf', {
         params: {
           desde: filtros.desde,
@@ -118,6 +122,7 @@ export default function Informes() {
         },
         responseType: 'blob'
       });
+      console.log('Response recibida:', response);
 
       // Crear blob y descargar
       const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -129,8 +134,47 @@ export default function Informes() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch {
+      console.log('PDF descargado exitosamente');
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
       showToast.error('Error al generar el PDF');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Descargar CSV
+  const descargarCSV = async (tipo) => {
+    console.log(`=== DESCARGANDO CSV ${tipo.toUpperCase()} ===`);
+    console.log('Filtros:', filtros);
+    setLoading(true);
+    try {
+      console.log(`Enviando request a /csv/${tipo}...`);
+      const response = await api.get(`/csv/${tipo}`, {
+        params: {
+          desde: filtros.desde,
+          hasta: filtros.hasta
+        },
+        responseType: 'blob'
+      });
+      console.log('Response recibida:', response);
+
+      // Crear blob y descargar
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${tipo}-${filtros.desde}-${filtros.hasta}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log(`CSV ${tipo} descargado exitosamente`);
+      showToast.success(`CSV de ${tipo} descargado exitosamente`);
+    } catch (error) {
+      console.error(`Error al generar CSV ${tipo}:`, error);
+      showToast.error('Error al generar el CSV');
     } finally {
       setLoading(false);
     }
@@ -209,21 +253,37 @@ export default function Informes() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="space-y-2">
               <button
                 onClick={cargarEstadisticas}
                 disabled={loading || !filtros.desde || !filtros.hasta}
-                className="flex-1 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="w-full px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {loading ? 'Cargando...' : 'Generar Informe'}
               </button>
-              <button
-                onClick={descargarPDF}
-                disabled={loading || !filtros.desde || !filtros.hasta}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                📥 PDF
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={descargarPDF}
+                  disabled={loading || !filtros.desde || !filtros.hasta}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+                >
+                  PDF
+                </button>
+                <button
+                  onClick={() => descargarCSV('visitas')}
+                  disabled={loading || !filtros.desde || !filtros.hasta}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+                >
+                  CSV Visitas
+                </button>
+                <button
+                  onClick={() => descargarCSV('quizzes')}
+                  disabled={loading || !filtros.desde || !filtros.hasta}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+                >
+                  CSV Quizzes
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -457,7 +517,18 @@ export default function Informes() {
                           <p className="text-gray-700 font-medium mb-1">
                             {pregunta.titulo_pregunta}
                           </p>
-                          <p className="text-gray-800 italic">{pregunta.texto}</p>
+                          <p className="text-gray-800 italic mb-2">{pregunta.texto}</p>
+                          {pregunta.respuesta_incorrecta_comun && (
+                            <div className="bg-red-100 border border-red-300 rounded px-3 py-2 mt-2">
+                              <p className="text-xs text-red-700 font-semibold mb-1">[X] Respuesta incorrecta mas comun:</p>
+                              <p className="text-sm text-red-900 font-medium">
+                                "{pregunta.respuesta_incorrecta_comun}"
+                              </p>
+                              <p className="text-xs text-red-600 mt-1">
+                                ({pregunta.veces_respuesta_incorrecta} {pregunta.veces_respuesta_incorrecta === 1 ? 'persona' : 'personas'} marco esta respuesta)
+                              </p>
+                            </div>
+                          )}
                         </div>
                         <div className="flex-shrink-0">
                           <div className="bg-red-600 text-white px-4 py-2 rounded-full font-bold text-lg">
@@ -496,9 +567,23 @@ export default function Informes() {
           
           {/* Selección de Quizzes para PDF */}
           <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-6">
-            <h3 className="text-lg font-bold text-blue-800 mb-3 flex items-center gap-2">
-              📄 Seleccionar Quizzes para incluir en el PDF
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold text-blue-800 flex items-center gap-2">
+                📄 Seleccionar Quizzes para incluir en el PDF
+              </h3>
+              <button
+                onClick={() => {
+                  if (quizzesParaPDF.length === quizzes.length) {
+                    setQuizzesParaPDF([]);
+                  } else {
+                    setQuizzesParaPDF(quizzes.map(q => q.id_quizz));
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition text-sm"
+              >
+                {quizzesParaPDF.length === quizzes.length ? 'Desmarcar Todos' : 'Marcar Todos'}
+              </button>
+            </div>
             <p className="text-sm text-blue-600 mb-3">
               Marca los quizzes que deseas incluir en el informe PDF (se incluirá el análisis detallado de cada pregunta)
             </p>

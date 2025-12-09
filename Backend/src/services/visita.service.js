@@ -263,10 +263,18 @@ export async function getEstadisticasService(desde, hasta) {
                                 quiz_titulo: preguntaInfo.quiz_titulo,
                                 titulo_pregunta: preguntaInfo.titulo,
                                 texto: preguntaInfo.texto,
-                                errores: 0
+                                errores: 0,
+                                respuestas_incorrectas: {} // Track respuestas incorrectas
                             };
                         }
                         preguntasDificiles[key].errores++;
+                        
+                        // Contabilizar la respuesta incorrecta
+                        const textoRespuesta = respuesta.texto_respuesta || 'Respuesta desconocida';
+                        if (!preguntasDificiles[key].respuestas_incorrectas[textoRespuesta]) {
+                            preguntasDificiles[key].respuestas_incorrectas[textoRespuesta] = 0;
+                        }
+                        preguntasDificiles[key].respuestas_incorrectas[textoRespuesta]++;
                     }
                 }
             }
@@ -291,6 +299,19 @@ export async function getEstadisticasService(desde, hasta) {
             rangoHorarioPico,
             distribucionHoraria,
             preguntasDificiles: Object.values(preguntasDificiles)
+                .map(p => {
+                    // Encontrar la respuesta incorrecta más común
+                    const respuestasArray = Object.entries(p.respuestas_incorrectas)
+                        .map(([texto, count]) => ({ texto, count }))
+                        .sort((a, b) => b.count - a.count);
+                    
+                    return {
+                        ...p,
+                        respuesta_incorrecta_comun: respuestasArray[0]?.texto || null,
+                        veces_respuesta_incorrecta: respuestasArray[0]?.count || 0,
+                        todas_respuestas_incorrectas: respuestasArray
+                    };
+                })
                 .sort((a, b) => b.errores - a.errores)
                 .slice(0, 10) // Top 10 preguntas con más errores
         }, null];

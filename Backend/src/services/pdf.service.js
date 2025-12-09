@@ -178,6 +178,9 @@ async function generarGraficoBarras(datos, titulo) {
     const labels = Object.keys(datos);
     const values = Object.values(datos);
 
+    const maxValue = Math.max(...values);
+    const suggestedMax = Math.ceil(maxValue * 1.2); // 20% más alto que el valor máximo
+
     const configuration = {
         type: 'bar',
         data: {
@@ -193,7 +196,18 @@ async function generarGraficoBarras(datos, titulo) {
         options: {
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    suggestedMax: suggestedMax,
+                    ticks: {
+                        stepSize: 1,
+                        precision: 0
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
                 }
             }
         }
@@ -207,30 +221,49 @@ async function generarGraficoBarras(datos, titulo) {
  * Obtener estadísticas modernas usando la nueva estructura de visitas
  */
 async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
+    console.log('[PDF Service] Obteniendo estadísticas modernas...');
     const desde = fechaInicio.toISOString().split('T')[0];
     const hasta = fechaFin.toISOString().split('T')[0];
+    console.log('[PDF Service] Query rango:', desde, 'a', hasta);
 
-    const query = `
+    // Query para visitas (solo contexto fisico)
+    const queryVisitas = `
         SELECT 
             v.id_visita,
             v.fecha_visita,
             v.duracion_segundos,
             v.id_exhibicion,
-            e.nombre as exhibicion_nombre,
-            COALESCE(v.puntaje_quiz, 0) as puntaje_quiz,
-            COALESCE(q.cant_preguntas, 0) as preguntas_totales,
-            v.respuestas_quiz
+            e.nombre as exhibicion_nombre
         FROM visita v
         LEFT JOIN exhibicion e ON v.id_exhibicion = e.id_exhibicion
-        LEFT JOIN quizz q ON v.id_exhibicion = q.id_exhibicion AND q.es_activo = true
         WHERE v.fecha_visita >= $1 AND v.fecha_visita <= $2
         ORDER BY v.fecha_visita DESC
     `;
 
-    const visitas = await AppDataSource.query(query, [desde, hasta + ' 23:59:59']);
+    // Query para respuestas de quiz
+    const queryRespuestas = `
+        SELECT 
+            r.id_responde,
+            r.id_usuario,
+            r.id_quizz,
+            r.correctas,
+            r.tiempo_segundos,
+            r.fecha_responde,
+            q.cant_preguntas,
+            q.titulo as quiz_titulo,
+            q.id_exhibicion
+        FROM responde r
+        LEFT JOIN quizz q ON r.id_quizz = q.id_quizz
+        WHERE r.fecha_responde >= $1 AND r.fecha_responde <= $2
+    `;
+
+    const visitas = await AppDataSource.query(queryVisitas, [desde, hasta + ' 23:59:59']);
+    const respuestas = await AppDataSource.query(queryRespuestas, [desde, hasta + ' 23:59:59']);
+    console.log('[PDF Service] Visitas encontradas:', visitas.length);
+    console.log('[PDF Service] Respuestas encontradas:', respuestas.length);
 
     const totalVisitas = visitas.length;
-    const visitasConQuiz = visitas.filter(v => v.puntaje_quiz !== null && v.puntaje_quiz > 0).length;
+    const visitasConQuiz = respuestas.length;
     
     // Visitas por exhibición
     const visitasPorExhibicion = {};
@@ -239,11 +272,12 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
         visitasPorExhibicion[nombre] = (visitasPorExhibicion[nombre] || 0) + 1;
     });
 
-    // Distribución de puntajes
+    // Distribución de puntajes desde responde (con nombre del quiz)
     const distribucionPuntajes = {};
-    visitas.forEach(v => {
-        if (v.puntaje_quiz !== null && v.puntaje_quiz > 0 && v.preguntas_totales > 0) {
-            const key = `${v.puntaje_quiz}/${v.preguntas_totales}`;
+    respuestas.forEach(r => {
+        if (r.correctas !== null && r.correctas >= 0 && r.cant_preguntas > 0) {
+            const quizNombre = r.quiz_titulo || 'Quiz desconocido';
+            const key = `${quizNombre}: ${r.correctas}/${r.cant_preguntas}`;
             distribucionPuntajes[key] = (distribucionPuntajes[key] || 0) + 1;
         }
     });
@@ -287,24 +321,36 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
             visitas: visitasPorHora[hora]
         }));
 
-    // Preguntas difíciles - obtener dinámicamente de la base de datos
+    // Preguntas difíciles - obtener respuestas_detalle desde responde
+    const queryRespuestasDetalle = `
+        SELECT 
+            r.id_quizz,
+            r.respuestas_detalle
+        FROM responde r
+        WHERE r.fecha_responde >= $1 AND r.fecha_responde <= $2
+        AND r.respuestas_detalle IS NOT NULL
+    `;
+    
+    const respuestasDetalle = await AppDataSource.query(queryRespuestasDetalle, [desde, hasta + ' 23:59:59']);
+    
     const preguntasDificiles = {};
     const preguntasCache = {};
     
-    for (const v of visitas) {
-        if (v.respuestas_quiz && Array.isArray(v.respuestas_quiz) && v.respuestas_quiz.length > 0) {
-            for (const respuesta of v.respuestas_quiz) {
+    for (const r of respuestasDetalle) {
+        if (r.respuestas_detalle && Array.isArray(r.respuestas_detalle) && r.respuestas_detalle.length > 0) {
+            for (const respuesta of r.respuestas_detalle) {
                 if (!respuesta.es_correcta && respuesta.id_pregunta) {
-                    const key = `${v.id_exhibicion}_${respuesta.id_pregunta}`;
+                    const key = `${r.id_quizz}_${respuesta.id_pregunta}`;
                     
                     if (!preguntasDificiles[key]) {
                         let preguntaInfo = preguntasCache[respuesta.id_pregunta];
                         
                         if (!preguntaInfo) {
                             const queryPregunta = `
-                                SELECT p.titulo, p.texto, q.titulo as quiz_titulo
+                                SELECT p.titulo, p.texto, q.titulo as quiz_titulo, q.id_exhibicion, e.nombre as exhibicion_nombre
                                 FROM pregunta p
                                 JOIN quizz q ON p.id_quizz = q.id_quizz
+                                JOIN exhibicion e ON q.id_exhibicion = e.id_exhibicion
                                 WHERE p.id_pregunta = $1
                             `;
                             const [preguntaData] = await AppDataSource.query(queryPregunta, [respuesta.id_pregunta]);
@@ -316,17 +362,25 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
                         
                         if (preguntaInfo) {
                             preguntasDificiles[key] = {
-                                exhibicion: visitasPorExhibicion[v.id_exhibicion]?.nombre || v.id_exhibicion,
+                                exhibicion: preguntaInfo.exhibicion_nombre,
                                 quiz_titulo: preguntaInfo.quiz_titulo,
                                 titulo_pregunta: preguntaInfo.titulo,
                                 texto: preguntaInfo.texto,
-                                errores: 0
+                                errores: 0,
+                                respuestas_incorrectas: {}
                             };
                         }
                     }
                     
                     if (preguntasDificiles[key]) {
                         preguntasDificiles[key].errores++;
+                        
+                        // Contabilizar respuesta incorrecta
+                        const textoRespuesta = respuesta.texto_respuesta || 'Respuesta desconocida';
+                        if (!preguntasDificiles[key].respuestas_incorrectas[textoRespuesta]) {
+                            preguntasDificiles[key].respuestas_incorrectas[textoRespuesta] = 0;
+                        }
+                        preguntasDificiles[key].respuestas_incorrectas[textoRespuesta]++;
                     }
                 }
             }
@@ -342,6 +396,18 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
         rangoHorarioPico,
         distribucionHoraria,
         preguntasDificiles: Object.values(preguntasDificiles)
+            .map(p => {
+                // Encontrar la respuesta incorrecta más común
+                const respuestasArray = Object.entries(p.respuestas_incorrectas || {})
+                    .map(([texto, count]) => ({ texto, count }))
+                    .sort((a, b) => b.count - a.count);
+                
+                return {
+                    ...p,
+                    respuesta_incorrecta_comun: respuestasArray[0]?.texto || null,
+                    veces_respuesta_incorrecta: respuestasArray[0]?.count || 0
+                };
+            })
             .sort((a, b) => b.errores - a.errores)
             .slice(0, 10)
     };
@@ -350,9 +416,25 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
 /**
  * Generar PDF del informe
  */
-export async function generarInformePDFService(desde, hasta, preset, quizzesIds = []) {
+export async function generarInformePDFService(desde, hasta, preset, quizzesIds = [], userId = null) {
     try {
+        console.log('[PDF Service] Calculando rango de fechas...');
         const { fechaInicio, fechaFin } = calcularRangoFechas(desde, hasta, preset);
+        console.log('[PDF Service] Fechas:', fechaInicio.toISOString(), '-', fechaFin.toISOString());
+
+        // Obtener datos del usuario que genera el informe
+        let usuarioNombre = 'Usuario Desconocido';
+        if (userId) {
+            try {
+                const usuarioRepo = AppDataSource.getRepository("Usuario");
+                const usuario = await usuarioRepo.findOne({ where: { id_usuario: userId } });
+                if (usuario) {
+                    usuarioNombre = `${usuario.nombre} ${usuario.apellido}`;
+                }
+            } catch (error) {
+                console.error('Error obteniendo usuario:', error);
+            }
+        }
 
         // Obtener estadísticas modernas
         const stats = await obtenerEstadisticasModernas(fechaInicio, fechaFin);
@@ -367,6 +449,8 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
         doc.moveDown();
         doc.fontSize(12).text(`Período: ${fechaInicio.toLocaleDateString()} - ${fechaFin.toLocaleDateString()}`, { align: 'center' });
         doc.text(`Generado: ${new Date().toLocaleString()}`, { align: 'center' });
+        doc.fontSize(10).fillColor('#666666').text(`Generado por: ${usuarioNombre}`, { align: 'center' });
+        doc.fillColor('#000000').fontSize(12);
         doc.moveDown(2);
 
         // Resumen General
@@ -437,44 +521,17 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
             doc.moveDown(2);
         }
 
-        // Nueva página para quizzes
-        doc.addPage();
-
-        // Distribución de Puntajes
-        doc.fontSize(16).text('DISTRIBUCION DE PUNTAJES', { underline: true });
-        doc.moveDown();
-        doc.fontSize(12);
-        
-        if (Object.keys(stats.distribucionPuntajes).length > 0) {
-            doc.text('Puntajes obtenidos por los visitantes:');
-            const puntajesOrdenados = Object.entries(stats.distribucionPuntajes)
-                .sort((a, b) => b[1] - a[1]);
-            
-            puntajesOrdenados.forEach(([puntaje, cantidad]) => {
-                const porcentaje = ((cantidad / stats.visitasConQuiz) * 100).toFixed(1);
-                doc.text(`  • ${puntaje} puntos: ${cantidad} visitantes (${porcentaje}%)`);
-            });
-            doc.moveDown(2);
-
-            // Gráfico de distribución de puntajes
-            const dataPuntajes = {};
-            puntajesOrdenados.forEach(([puntaje, cantidad]) => {
-                dataPuntajes[puntaje] = cantidad;
-            });
-            const graficoPuntajes = await generarGraficoBarras(dataPuntajes, 'Distribución de Puntajes');
-            doc.image(graficoPuntajes, { width: 500 });
-        } else {
-            doc.text('No hay datos de puntajes en este período.');
-        }
-        doc.moveDown(2);
-
         // Nueva página para preguntas difíciles
         doc.addPage();
 
         // Preguntas con más errores
         doc.fontSize(16).text('PREGUNTAS CON MAS ERRORES', { underline: true });
         doc.moveDown();
-        doc.fontSize(12);
+        doc.fontSize(10).fillColor('#666666');
+        doc.text('Este gráfico muestra las preguntas que más visitantes respondieron incorrectamente.');
+        doc.text('P1, P2, etc. representa cada pregunta. La altura de la barra indica la cantidad de errores.');
+        doc.fillColor('#000000').fontSize(12);
+        doc.moveDown();
         
         if (stats.preguntasDificiles.length > 0) {
             doc.text('Top 10 preguntas que más visitantes respondieron incorrectamente:');
@@ -492,6 +549,12 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
                 doc.fillColor('#374151').fontSize(10);
                 doc.text(`   ${pregunta.titulo_pregunta || 'Sin título'}: ${pregunta.texto}`);
                 
+                if (pregunta.respuesta_incorrecta_comun) {
+                    doc.fillColor('#DC2626').fontSize(9).font('Helvetica-Oblique');
+                    doc.text(`   [X] Respuesta incorrecta mas comun: "${pregunta.respuesta_incorrecta_comun}" (${pregunta.veces_respuesta_incorrecta} veces)`);
+                    doc.font('Helvetica');
+                }
+                
                 doc.fillColor('#000000');
                 doc.moveDown(0.7);
             });
@@ -500,9 +563,11 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
             // Gráfico de preguntas difíciles
             const dataPreguntasDificiles = {};
             stats.preguntasDificiles.slice(0, 5).forEach((p, idx) => {
-                dataPreguntasDificiles[`P${idx + 1}`] = p.errores;
+                // Usar el título de la pregunta truncado como etiqueta
+                const label = `P${idx + 1}: ${p.titulo_pregunta.substring(0, 20)}${p.titulo_pregunta.length > 20 ? '...' : ''}`;
+                dataPreguntasDificiles[label] = p.errores;
             });
-            const graficoDificiles = await generarGraficoBarras(dataPreguntasDificiles, 'Top 5 Preguntas con Más Errores');
+            const graficoDificiles = await generarGraficoBarras(dataPreguntasDificiles, 'Top 5 Preguntas con Mas Errores (cantidad de errores)');
             doc.image(graficoDificiles, { width: 500 });
         } else {
             doc.text('No hay datos de errores en preguntas para este período.');
@@ -524,11 +589,53 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
                     // Título del quiz
                     doc.fontSize(18).fillColor('#000000').text(`ANÁLISIS DETALLADO DEL QUIZ`, { align: 'center', underline: true });
                     doc.moveDown();
-                    doc.fontSize(16).text(analisis.quiz.titulo, { align: 'center' });
+                    doc.fontSize(16).text(`Quiz de ${analisis.quiz.exhibicion}`, { align: 'center' });
                     doc.moveDown(0.5);
-                    doc.fontSize(12).text(`Exhibición: ${analisis.quiz.exhibicion}`, { align: 'center' });
-                    doc.text(`Total de Preguntas con Respuestas: ${analisis.analisis_preguntas.length} | Participantes: ${analisis.total_participantes}`, { align: 'center' });
+                    doc.fontSize(12).text(`ID del Quiz: ${analisis.quiz.id_quizz}`, { align: 'center' });
+                    doc.text(`Total de Preguntas: ${analisis.quiz.cant_preguntas} | Preguntas con Respuestas: ${analisis.analisis_preguntas.length} | Participantes: ${analisis.total_participantes}`, { align: 'center' });
                     doc.moveDown(2);
+                    
+                    // Distribución de Puntajes para este quiz específico
+                    doc.fontSize(14).fillColor('#7C3AED').text('DISTRIBUCION DE PUNTAJES', { underline: true });
+                    doc.fontSize(10).fillColor('#666666');
+                    doc.text('Cuantos participantes obtuvieron cada puntaje en este quiz.');
+                    doc.fillColor('#000000').fontSize(12);
+                    doc.moveDown();
+                    
+                    // Obtener distribución de puntajes SOLO para este quiz
+                    const queryPuntajes = `
+                        SELECT 
+                            r.correctas,
+                            q.cant_preguntas,
+                            COUNT(*) as cantidad
+                        FROM responde r
+                        JOIN quizz q ON r.id_quizz = q.id_quizz
+                        WHERE r.id_quizz = $1
+                        GROUP BY r.correctas, q.cant_preguntas
+                        ORDER BY r.correctas DESC
+                    `;
+                    const puntajesQuiz = await AppDataSource.query(queryPuntajes, [quizId]);
+                    
+                    if (puntajesQuiz.length > 0) {
+                        const dataPuntajesQuiz = {};
+                        puntajesQuiz.forEach(p => {
+                            const label = `${p.correctas}/${p.cant_preguntas}`;
+                            dataPuntajesQuiz[label] = parseInt(p.cantidad);
+                            const porcentaje = ((p.cantidad / analisis.total_participantes) * 100).toFixed(1);
+                            doc.text(`  • ${label} correctas: ${p.cantidad} participantes (${porcentaje}%)`);
+                        });
+                        doc.moveDown();
+                        
+                        // Gráfico de barras para este quiz
+                        const graficoPuntajesQuiz = await generarGraficoBarras(dataPuntajesQuiz, `Distribucion de Puntajes (Total: ${analisis.total_participantes} participantes)`);
+                        doc.image(graficoPuntajesQuiz, { width: 500 });
+                        doc.moveDown(2);
+                    }
+                    
+                    // Separador
+                    doc.fontSize(14).fillColor('#7C3AED').text('ANALISIS POR PREGUNTA', { underline: true });
+                    doc.fillColor('#000000').fontSize(12);
+                    doc.moveDown();
                     
                     // Análisis de cada pregunta (solo las que tienen respuestas)
                     analisis.analisis_preguntas.forEach((pregunta, idx) => {
@@ -584,9 +691,23 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
         // Finalizar PDF
         doc.end();
 
-        return new Promise((resolve, reject) => {
-            doc.on('end', () => {
+        return new Promise(async (resolve, reject) => {
+            doc.on('end', async () => {
                 const pdfBuffer = Buffer.concat(buffers);
+                
+                // Guardar registro del informe en BD
+                if (userId) {
+                    try {
+                        const informeRepo = AppDataSource.getRepository("Informe");
+                        await informeRepo.save({
+                            id_usuario: userId,
+                            descripcion: `Informe generado para el periodo ${fechaInicio.toLocaleDateString()} - ${fechaFin.toLocaleDateString()}`
+                        });
+                    } catch (error) {
+                        console.error("Error guardando registro de informe:", error);
+                    }
+                }
+                
                 resolve([pdfBuffer, null]);
             });
             doc.on('error', (err) => {

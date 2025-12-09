@@ -8,6 +8,7 @@ import visitaRoutes from "./visita.routes.js";
 import respondeRoutes from "./responde.routes.js";
 import informeRoutes from "./informe.routes.js";
 import authRoutes from "./auth.routes.js";
+import csvRoutes from "./csv.routes.js";
 
 
 const router = Router();
@@ -23,7 +24,8 @@ router
     .use("/usuario", usuarioRoutes)
     .use("/visita", visitaRoutes)
     .use("/responde", respondeRoutes)
-    .use("/informe", informeRoutes);
+    .use("/informe", informeRoutes)
+    .use("/csv", csvRoutes);
 
 
 
