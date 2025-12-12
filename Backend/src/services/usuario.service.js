@@ -2,8 +2,6 @@
 import { AppDataSource } from "../config/configDb.js";
 import { Usuario } from "../entity/Usuario.entity.js";
 import bcrypt from "bcryptjs";
-
-// Crear usuario anónimo (para Unity)
 export async function createUsuarioAnonimoService() {
     try {
         const usuarioRepo = AppDataSource.getRepository(Usuario);
@@ -59,8 +57,6 @@ export async function registerUsuarioService(nombre, apellido, correo, contrasen
         return [null, "Error interno del servidor"];
     }
 }
-
-// Obtener todos los usuarios
 export async function getAllUsuariosService() {
     try {
         const usuarioRepo = AppDataSource.getRepository(Usuario);
@@ -74,8 +70,6 @@ export async function getAllUsuariosService() {
         return [null, "Error interno del servidor"];
     }
 }
-
-// Obtener usuario por ID
 export async function getUsuarioByIdService(id_usuario) {
     try {
         const usuarioRepo = AppDataSource.getRepository(Usuario);
@@ -94,8 +88,6 @@ export async function getUsuarioByIdService(id_usuario) {
         return [null, "Error interno del servidor"];
     }
 }
-
-// Actualizar usuario
 export async function updateUsuarioService(id_usuario, datosActualizados) {
     try {
         const usuarioRepo = AppDataSource.getRepository(Usuario);
@@ -142,8 +134,6 @@ export async function updateUsuarioService(id_usuario, datosActualizados) {
         return [null, "Error interno del servidor"];
     }
 }
-
-// Eliminar usuario
 export async function deleteUsuarioService(id_usuario) {
     try {
         const usuarioRepo = AppDataSource.getRepository(Usuario);

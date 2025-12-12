@@ -64,11 +64,11 @@ async function obtenerEstadisticasVisitas(fechaInicio, fechaFin) {
     // Visitas por exhibición
     const visitasPorExhibicion = {};
     const duracionPorExhibicion = {};
-    
+
     visitas.forEach(v => {
         const id_exhibicion = v.id_exhibicion;
         visitasPorExhibicion[id_exhibicion] = (visitasPorExhibicion[id_exhibicion] || 0) + 1;
-        
+
         if (v.duracion_segundos) {
             if (!duracionPorExhibicion[id_exhibicion]) {
                 duracionPorExhibicion[id_exhibicion] = [];
@@ -125,7 +125,7 @@ async function obtenerEstadisticasQuizzes(fechaInicio, fechaFin) {
 
     respuestas.forEach(r => {
         const id_quizz = r.id_quizz;
-        
+
         if (!correctasPorQuizz[id_quizz]) {
             correctasPorQuizz[id_quizz] = [];
         }
@@ -225,8 +225,6 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
     const desde = fechaInicio.toISOString().split('T')[0];
     const hasta = fechaFin.toISOString().split('T')[0];
     console.log('[PDF Service] Query rango:', desde, 'a', hasta);
-
-    // Query para visitas (solo contexto fisico)
     const queryVisitas = `
         SELECT 
             v.id_visita,
@@ -239,8 +237,6 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
         WHERE v.fecha_visita >= $1 AND v.fecha_visita <= $2
         ORDER BY v.fecha_visita DESC
     `;
-
-    // Query para respuestas de quiz
     const queryRespuestas = `
         SELECT 
             r.id_responde,
@@ -264,7 +260,7 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
 
     const totalVisitas = visitas.length;
     const visitasConQuiz = respuestas.length;
-    
+
     // Visitas por exhibición
     const visitasPorExhibicion = {};
     visitas.forEach(v => {
@@ -292,14 +288,14 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
     // Encontrar rango horario pico
     let maxVisitas = 0;
     let rangoHorarioPico = { inicio: 0, fin: 0, visitas: 0, descripcion: 'N/A' };
-    
+
     for (let ventana = 1; ventana <= 3; ventana++) {
         for (let horaInicio = 0; horaInicio <= 23 - ventana; horaInicio++) {
             let visitasEnVentana = 0;
             for (let i = 0; i < ventana; i++) {
                 visitasEnVentana += (visitasPorHora[horaInicio + i] || 0);
             }
-            
+
             if (visitasEnVentana > maxVisitas) {
                 maxVisitas = visitasEnVentana;
                 rangoHorarioPico = {
@@ -330,21 +326,21 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
         WHERE r.fecha_responde >= $1 AND r.fecha_responde <= $2
         AND r.respuestas_detalle IS NOT NULL
     `;
-    
+
     const respuestasDetalle = await AppDataSource.query(queryRespuestasDetalle, [desde, hasta + ' 23:59:59']);
-    
+
     const preguntasDificiles = {};
     const preguntasCache = {};
-    
+
     for (const r of respuestasDetalle) {
         if (r.respuestas_detalle && Array.isArray(r.respuestas_detalle) && r.respuestas_detalle.length > 0) {
             for (const respuesta of r.respuestas_detalle) {
                 if (!respuesta.es_correcta && respuesta.id_pregunta) {
                     const key = `${r.id_quizz}_${respuesta.id_pregunta}`;
-                    
+
                     if (!preguntasDificiles[key]) {
                         let preguntaInfo = preguntasCache[respuesta.id_pregunta];
-                        
+
                         if (!preguntaInfo) {
                             const queryPregunta = `
                                 SELECT p.titulo, p.texto, q.titulo as quiz_titulo, q.id_exhibicion, e.nombre as exhibicion_nombre
@@ -359,7 +355,7 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
                                 preguntasCache[respuesta.id_pregunta] = preguntaInfo;
                             }
                         }
-                        
+
                         if (preguntaInfo) {
                             preguntasDificiles[key] = {
                                 exhibicion: preguntaInfo.exhibicion_nombre,
@@ -371,10 +367,10 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
                             };
                         }
                     }
-                    
+
                     if (preguntasDificiles[key]) {
                         preguntasDificiles[key].errores++;
-                        
+
                         // Contabilizar respuesta incorrecta
                         const textoRespuesta = respuesta.texto_respuesta || 'Respuesta desconocida';
                         if (!preguntasDificiles[key].respuestas_incorrectas[textoRespuesta]) {
@@ -401,7 +397,7 @@ async function obtenerEstadisticasModernas(fechaInicio, fechaFin) {
                 const respuestasArray = Object.entries(p.respuestas_incorrectas || {})
                     .map(([texto, count]) => ({ texto, count }))
                     .sort((a, b) => b.count - a.count);
-                
+
                 return {
                     ...p,
                     respuesta_incorrecta_comun: respuestasArray[0]?.texto || null,
@@ -421,8 +417,6 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
         console.log('[PDF Service] Calculando rango de fechas...');
         const { fechaInicio, fechaFin } = calcularRangoFechas(desde, hasta, preset);
         console.log('[PDF Service] Fechas:', fechaInicio.toISOString(), '-', fechaFin.toISOString());
-
-        // Obtener datos del usuario que genera el informe
         let usuarioNombre = 'Usuario Desconocido';
         if (userId) {
             try {
@@ -435,11 +429,7 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
                 console.error('Error obteniendo usuario:', error);
             }
         }
-
-        // Obtener estadísticas modernas
         const stats = await obtenerEstadisticasModernas(fechaInicio, fechaFin);
-
-        // Crear PDF
         const doc = new PDFDocument({ margin: 50 });
         const buffers = [];
         doc.on('data', buffers.push.bind(buffers));
@@ -468,7 +458,7 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
         doc.fontSize(12);
         const exhibicionesOrdenadas = Object.entries(stats.visitasPorExhibicion)
             .sort((a, b) => b[1] - a[1]);
-        
+
         exhibicionesOrdenadas.forEach(([nombre, cantidad]) => {
             const porcentaje = ((cantidad / stats.totalVisitas) * 100).toFixed(1);
             doc.text(`  • ${nombre}: ${cantidad} visitas (${porcentaje}%)`);
@@ -502,16 +492,14 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
             doc.fontSize(16).text('DISTRIBUCION DE VISITAS POR HORA', { underline: true });
             doc.moveDown();
             doc.fontSize(10);
-            
-            // Crear tabla de distribución horaria
             const maxVisitasHora = Math.max(...stats.distribucionHoraria.map(h => h.visitas));
             stats.distribucionHoraria.forEach((hora) => {
-                const esHoraPico = hora.hora >= stats.rangoHorarioPico.inicio && 
-                                   hora.hora < stats.rangoHorarioPico.fin;
-                
+                const esHoraPico = hora.hora >= stats.rangoHorarioPico.inicio &&
+                    hora.hora < stats.rangoHorarioPico.fin;
+
                 if (esHoraPico) {
-                    doc.fillColor('#D97706').text(`${hora.horaFormato}: ${hora.visitas} visitas [HORA MAS VISITADA]`, { 
-                        continued: false 
+                    doc.fillColor('#D97706').text(`${hora.horaFormato}: ${hora.visitas} visitas [HORA MAS VISITADA]`, {
+                        continued: false
                     });
                 } else {
                     doc.fillColor('#000000').text(`${hora.horaFormato}: ${hora.visitas} visitas`);
@@ -532,29 +520,29 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
         doc.text('P1, P2, etc. representa cada pregunta. La altura de la barra indica la cantidad de errores.');
         doc.fillColor('#000000').fontSize(12);
         doc.moveDown();
-        
+
         if (stats.preguntasDificiles.length > 0) {
             doc.text('Top 10 preguntas que más visitantes respondieron incorrectamente:');
             doc.moveDown();
-            
+
             stats.preguntasDificiles.forEach((pregunta, idx) => {
                 doc.fontSize(11).fillColor('#CC0000');
                 doc.text(`${idx + 1}. [${pregunta.errores} errores]`, { continued: true });
                 doc.fillColor('#0066CC');
                 doc.text(` [${pregunta.exhibicion}]`, { continued: false });
-                
+
                 doc.fillColor('#7C3AED').fontSize(10);
                 doc.text(`   ${pregunta.quiz_titulo || 'Quiz desconocido'}`);
-                
+
                 doc.fillColor('#374151').fontSize(10);
                 doc.text(`   ${pregunta.titulo_pregunta || 'Sin título'}: ${pregunta.texto}`);
-                
+
                 if (pregunta.respuesta_incorrecta_comun) {
                     doc.fillColor('#DC2626').fontSize(9).font('Helvetica-Oblique');
                     doc.text(`   [X] Respuesta incorrecta mas comun: "${pregunta.respuesta_incorrecta_comun}" (${pregunta.veces_respuesta_incorrecta} veces)`);
                     doc.font('Helvetica');
                 }
-                
+
                 doc.fillColor('#000000');
                 doc.moveDown(0.7);
             });
@@ -579,13 +567,11 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
             for (const quizId of quizzesIds) {
                 // Nueva página para cada quiz
                 doc.addPage();
-                
-                // Obtener análisis del quiz
-                const [analisisData, analisisError] = await getAnalisisQuizService(quizId);
-                
+                const [analisisData, analisisError] = await getAnalisisQuizService(quizId, fechaInicio, fechaFin);
+
                 if (!analisisError && analisisData) {
                     const analisis = analisisData;
-                    
+
                     // Título del quiz
                     doc.fontSize(18).fillColor('#000000').text(`ANÁLISIS DETALLADO DEL QUIZ`, { align: 'center', underline: true });
                     doc.moveDown();
@@ -594,86 +580,180 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
                     doc.fontSize(12).text(`ID del Quiz: ${analisis.quiz.id_quizz}`, { align: 'center' });
                     doc.text(`Total de Preguntas: ${analisis.quiz.cant_preguntas} | Preguntas con Respuestas: ${analisis.analisis_preguntas.length} | Participantes: ${analisis.total_participantes}`, { align: 'center' });
                     doc.moveDown(2);
-                    
+
                     // Distribución de Puntajes para este quiz específico
                     doc.fontSize(14).fillColor('#7C3AED').text('DISTRIBUCION DE PUNTAJES', { underline: true });
                     doc.fontSize(10).fillColor('#666666');
                     doc.text('Cuantos participantes obtuvieron cada puntaje en este quiz.');
                     doc.fillColor('#000000').fontSize(12);
                     doc.moveDown();
-                    
-                    // Obtener distribución de puntajes SOLO para este quiz
+                    const desdeStr = fechaInicio.toISOString().split('T')[0];
+                    const hastaStr = fechaFin.toISOString().split('T')[0];
                     const queryPuntajes = `
                         SELECT 
                             r.correctas,
+                            r.respuestas_detalle,
                             q.cant_preguntas,
                             COUNT(*) as cantidad
                         FROM responde r
                         JOIN quizz q ON r.id_quizz = q.id_quizz
                         WHERE r.id_quizz = $1
-                        GROUP BY r.correctas, q.cant_preguntas
+                        AND r.fecha_responde >= $2
+                        AND r.fecha_responde <= $3
+                        GROUP BY r.correctas, q.cant_preguntas, r.respuestas_detalle
                         ORDER BY r.correctas DESC
                     `;
-                    const puntajesQuiz = await AppDataSource.query(queryPuntajes, [quizId]);
-                    
-                    if (puntajesQuiz.length > 0) {
+                    const puntajesQuizRaw = await AppDataSource.query(queryPuntajes, [quizId, desdeStr, hastaStr + ' 23:59:59']);
+
+                    if (puntajesQuizRaw.length > 0) {
+                        const cantPreguntas = puntajesQuizRaw[0].cant_preguntas;
+
+                        // Agrupar por puntaje y detectar abandonos
+                        const puntajesAgrupados = {};
+                        const abandonosPorPreguntasRespondidas = {};
+                        let totalAbandonos = 0;
+
+                        puntajesQuizRaw.forEach(row => {
+                            const puntaje = row.correctas;
+                            const respuestasDetalle = row.respuestas_detalle;
+                            const cantidad = parseInt(row.cantidad);
+
+                            // Detectar si es abandono
+                            const preguntasRespondidas = respuestasDetalle && Array.isArray(respuestasDetalle)
+                                ? respuestasDetalle.length
+                                : 0;
+                            const esAbandono = preguntasRespondidas < cantPreguntas;
+
+                            // Agrupar por puntaje
+                            if (!puntajesAgrupados[puntaje]) {
+                                puntajesAgrupados[puntaje] = {
+                                    total: 0,
+                                    abandonos: 0
+                                };
+                            }
+                            puntajesAgrupados[puntaje].total += cantidad;
+
+                            if (esAbandono) {
+                                puntajesAgrupados[puntaje].abandonos += cantidad;
+                                totalAbandonos += cantidad;
+
+                                // Contar abandonos por cantidad de preguntas respondidas
+                                if (!abandonosPorPreguntasRespondidas[preguntasRespondidas]) {
+                                    abandonosPorPreguntasRespondidas[preguntasRespondidas] = 0;
+                                }
+                                abandonosPorPreguntasRespondidas[preguntasRespondidas] += cantidad;
+                            }
+                        });
+
+                        // Calcular total real de participantes
+                        const totalParticipantesReal = Object.values(puntajesAgrupados).reduce((sum, p) => sum + p.total, 0);
+
+                        // Mostrar distribución con abandonos
                         const dataPuntajesQuiz = {};
-                        puntajesQuiz.forEach(p => {
-                            const label = `${p.correctas}/${p.cant_preguntas}`;
-                            dataPuntajesQuiz[label] = parseInt(p.cantidad);
-                            const porcentaje = ((p.cantidad / analisis.total_participantes) * 100).toFixed(1);
-                            doc.text(`  • ${label} correctas: ${p.cantidad} participantes (${porcentaje}%)`);
+                        Object.keys(puntajesAgrupados).sort((a, b) => b - a).forEach(puntaje => {
+                            const label = `${puntaje}/${cantPreguntas}`;
+                            const datos = puntajesAgrupados[puntaje];
+                            dataPuntajesQuiz[label] = datos.total;
+                            const porcentaje = ((datos.total / totalParticipantesReal) * 100).toFixed(0);
+
+                            if (datos.abandonos > 0) {
+                                doc.text(`  • ${label} correctas: ${datos.total} participantes (${porcentaje}%) - ${datos.abandonos} abandonos`);
+                            } else {
+                                doc.text(`  • ${label} correctas: ${datos.total} participantes (${porcentaje}%)`);
+                            }
                         });
                         doc.moveDown();
-                        
+
                         // Gráfico de barras para este quiz
-                        const graficoPuntajesQuiz = await generarGraficoBarras(dataPuntajesQuiz, `Distribucion de Puntajes (Total: ${analisis.total_participantes} participantes)`);
+                        const graficoPuntajesQuiz = await generarGraficoBarras(dataPuntajesQuiz, `Distribucion de Puntajes (Total: ${totalParticipantesReal} participantes)`);
                         doc.image(graficoPuntajesQuiz, { width: 500 });
                         doc.moveDown(2);
+
+
+                        if (totalAbandonos > 0) {
+                            if (doc.y > 600) {
+                                doc.addPage();
+                            }
+
+                            doc.fontSize(14).fillColor('#DC2626').text('ANALISIS DE ABANDONOS', { underline: true });
+                            doc.fontSize(10).fillColor('#666666');
+                            doc.text('Participantes que abandonaron el quiz antes de completarlo.');
+                            doc.fillColor('#000000').fontSize(12);
+                            doc.moveDown();
+
+                            const porcentajeAbandonos = ((totalAbandonos / totalParticipantesReal) * 100).toFixed(1);
+                            doc.fontSize(11).fillColor('#DC2626');
+                            doc.text(`Total de abandonos: ${totalAbandonos} de ${totalParticipantesReal} participantes (${porcentajeAbandonos}%)`);
+                            doc.fillColor('#000000');
+                            doc.moveDown(0.5);
+
+                            doc.fontSize(11).text('Distribucion de abandonos por preguntas respondidas:');
+                            doc.fontSize(10);
+
+                            doc.moveDown(0.3);
+
+                            const dataAbandonos = {};
+                            Object.keys(abandonosPorPreguntasRespondidas).sort((a, b) => parseInt(a) - parseInt(b)).forEach(preguntasResp => {
+                                const cantidad = abandonosPorPreguntasRespondidas[preguntasResp];
+                                const porcentaje = ((cantidad / totalAbandonos) * 100).toFixed(0);
+                                const label = `${preguntasResp}/${cantPreguntas}`;
+                                dataAbandonos[label] = cantidad;
+                                doc.text(`  • ${label} preguntas respondidas: ${cantidad} personas (${porcentaje}%)`);
+                            });
+                            doc.moveDown();
+
+                            if (doc.y > 350) {
+                                doc.addPage();
+                            }
+
+                            const graficoAbandonos = await generarGraficoBarras(dataAbandonos, `Abandonos por Preguntas Respondidas (Total: ${totalAbandonos} abandonos)`);
+                            doc.image(graficoAbandonos, { width: 500 });
+                            doc.moveDown(2);
+                        }
                     }
-                    
+
                     // Separador
                     doc.fontSize(14).fillColor('#7C3AED').text('ANALISIS POR PREGUNTA', { underline: true });
                     doc.fillColor('#000000').fontSize(12);
                     doc.moveDown();
-                    
+
                     // Análisis de cada pregunta (solo las que tienen respuestas)
                     analisis.analisis_preguntas.forEach((pregunta, idx) => {
                         // Verificar si necesitamos una nueva página
                         if (doc.y > 650) {
                             doc.addPage();
                         }
-                        
+
                         doc.fontSize(14).fillColor('#5B21B6').text(`${idx + 1})`, { underline: true });
                         doc.moveDown(0.3);
                         doc.fontSize(12).fillColor('#000000').text(pregunta.enunciado, { width: 500 });
                         doc.fontSize(10).fillColor('#666666').text(`(${pregunta.total_respuestas} respuestas totales)`, { width: 500 });
                         doc.moveDown(0.5);
-                        
+
                         // Mostrar cada respuesta con su porcentaje
                         pregunta.respuestas.forEach((respuesta) => {
                             const icono = respuesta.es_correcta ? '[CORRECTA]' : '[INCORRECTA]';
                             const color = respuesta.es_correcta ? '#059669' : '#6B7280';
-                            
+
                             doc.fillColor(color);
                             doc.fontSize(11);
-                            doc.text(`  ${icono} ${respuesta.texto} - ${respuesta.porcentaje}% (${respuesta.cantidad} ${respuesta.cantidad === 1 ? 'respuesta' : 'respuestas'})`, { 
+                            doc.text(`  ${icono} ${respuesta.texto} - ${respuesta.porcentaje}% (${respuesta.cantidad} ${respuesta.cantidad === 1 ? 'respuesta' : 'respuestas'})`, {
                                 width: 500,
                                 align: 'left'
                             });
                             doc.fillColor('#000000');
                             doc.moveDown(0.3);
                         });
-                        
+
                         doc.moveDown(1);
-                        
+
                         // Línea divisoria
                         if (idx < analisis.analisis_preguntas.length - 1) {
                             doc.strokeColor('#E5E7EB')
-                               .lineWidth(1)
-                               .moveTo(50, doc.y)
-                               .lineTo(550, doc.y)
-                               .stroke();
+                                .lineWidth(1)
+                                .moveTo(50, doc.y)
+                                .lineTo(550, doc.y)
+                                .stroke();
                             doc.moveDown(1);
                         }
                     });
@@ -694,7 +774,7 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
         return new Promise(async (resolve, reject) => {
             doc.on('end', async () => {
                 const pdfBuffer = Buffer.concat(buffers);
-                
+
                 // Guardar registro del informe en BD
                 if (userId) {
                     try {
@@ -707,7 +787,7 @@ export async function generarInformePDFService(desde, hasta, preset, quizzesIds 
                         console.error("Error guardando registro de informe:", error);
                     }
                 }
-                
+
                 resolve([pdfBuffer, null]);
             });
             doc.on('error', (err) => {

@@ -2,8 +2,6 @@
 
 import { AppDataSource } from "../config/configDb.js";
 import { Exhibicion } from "../entity/Exhibicion.entity.js";
-
-// Obtener todas las exhibiciones
 export async function getAllExhibicionesService() {
     try {
         const exhibicionRepo = AppDataSource.getRepository(Exhibicion);

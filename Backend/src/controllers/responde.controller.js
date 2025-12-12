@@ -7,9 +7,17 @@ import {
 
 export async function createResponde(req, res) {
     try {
-        const { id_usuario, id_quizz, correctas, tiempo_segundos } = req.body;
+        const { id_usuario, id_quizz, correctas, tiempo_segundos, respuestas_detalle } = req.body;
+        
+        console.log('[Responde Controller] Recibiendo respuesta de quiz:', {
+            id_quizz,
+            correctas,
+            respuestas_detalle_tipo: respuestas_detalle === null ? 'NULL' : 
+                                     Array.isArray(respuestas_detalle) ? `Array[${respuestas_detalle.length}]` : 
+                                     typeof respuestas_detalle
+        });
 
-        const [responde, error] = await createRespondeService(id_usuario, id_quizz, correctas, tiempo_segundos);
+        const [responde, error] = await createRespondeService(id_usuario, id_quizz, correctas, tiempo_segundos, respuestas_detalle);
 
         if (error) {
             return res.status(500).json({

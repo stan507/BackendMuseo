@@ -33,7 +33,6 @@ export const subirArchivo = async (file, objectKey) => {
  */
 export const uploadFileService = async (fileBuffer, subcarpeta, tipoArchivo, nombreArchivo, mimetype) => {
     try {
-        // Construir path: subcarpeta/tipoArchivo/nombreArchivo
         const objectPath = `${subcarpeta}/${tipoArchivo}/${nombreArchivo}`;
         
         await minioClient.putObject(
@@ -88,8 +87,6 @@ export const deleteFileService = async (filePath) => {
             }
             throw statError;
         }
-        
-        // Eliminar archivo
         await minioClient.removeObject(bucketName, filePath);
         
         console.log(`[MinIO] ✅ Archivo eliminado exitosamente: ${filePath}`);
@@ -112,7 +109,6 @@ export const deleteFileService = async (filePath) => {
  */
 export const getPresignedUrl = async (objectName) => {
     try {
-        // 1. Definimos la URL que queremos que vea el público (el puerto 1837)
         const endPointPublico = process.env.MINIO_ENDPOINT + ':1837';
 
         const url = await minioClient.presignedGetObject(

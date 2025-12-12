@@ -7,8 +7,6 @@ import {
     updateUsuarioService,
     deleteUsuarioService
 } from "../services/usuario.service.js";
-
-// Crear usuario anónimo (para Unity)
 export async function createUsuarioAnonimo(req, res) {
     try {
         const [usuario, error] = await createUsuarioAnonimoService();
@@ -61,8 +59,6 @@ export async function registerUsuario(req, res) {
         });
     }
 }
-
-// Obtener todos los usuarios
 export async function getAllUsuarios(req, res) {
     try {
         const [usuarios, error] = await getAllUsuariosService();
@@ -86,8 +82,6 @@ export async function getAllUsuarios(req, res) {
         });
     }
 }
-
-// Obtener usuario por ID
 export async function getUsuarioById(req, res) {
     try {
         const { id } = req.params;
@@ -113,8 +107,6 @@ export async function getUsuarioById(req, res) {
         });
     }
 }
-
-// Actualizar usuario
 export async function updateUsuario(req, res) {
     try {
         const { id } = req.params;
@@ -142,8 +134,6 @@ export async function updateUsuario(req, res) {
         });
     }
 }
-
-// Eliminar usuario
 export async function deleteUsuario(req, res) {
     try {
         const { id } = req.params;

@@ -8,8 +8,6 @@ import {
     deleteQuizzService,
     activarQuizzService
 } from "../services/quizz.service.js";
-
-// Obtener todos los quizzes
 export async function getAllQuizzes(req, res) {
     try {
         const [quizzes, error] = await getAllQuizzesService();
@@ -33,8 +31,6 @@ export async function getAllQuizzes(req, res) {
         });
     }
 }
-
-// Obtener quiz por ID
 export async function getQuizzById(req, res) {
     try {
         const { id } = req.params;
@@ -57,8 +53,6 @@ export async function getQuizzById(req, res) {
         });
     }
 }
-
-// Obtener todos los quizzes de una exhibición
 export async function getQuizzByExhibicion(req, res) {
     try {
         const { id_exhibicion } = req.params;
@@ -84,8 +78,6 @@ export async function getQuizzByExhibicion(req, res) {
         });
     }
 }
-
-// Crear quiz completo (nested)
 export async function createQuizz(req, res) {
     try {
         const { id_usuario, id_exhibicion, titulo, preguntas } = req.body;
@@ -112,8 +104,6 @@ export async function createQuizz(req, res) {
         });
     }
 }
-
-// Actualizar quiz completo (nested)
 export async function updateQuizz(req, res) {
     try {
         const { id } = req.params;
@@ -141,8 +131,6 @@ export async function updateQuizz(req, res) {
         });
     }
 }
-
-// Eliminar quiz
 export async function deleteQuizz(req, res) {
     try {
         const { id } = req.params;

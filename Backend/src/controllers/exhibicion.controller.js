@@ -1,8 +1,6 @@
 "use strict";
 
 import * as RelatoService from "../services/exhibicion.service.js";
-
-// Obtener todas las exhibiciones
 export const getAllExhibiciones = async (req, res) => {
     try {
         const [exhibiciones, error] = await RelatoService.getAllExhibicionesService();

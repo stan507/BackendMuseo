@@ -59,8 +59,6 @@ export async function loginService(correo, password) {
 export async function deviceLoginService(device_id) {
     try {
         const usuarioRepo = AppDataSource.getRepository(Usuario);
-        
-        // Buscar usuario por device_id (usando el campo correo con formato especial)
         const emailDispositivo = `device_${device_id}@museo.local`;
         let usuario = await usuarioRepo.findOne({ 
             where: { correo: emailDispositivo } 

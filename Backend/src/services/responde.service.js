@@ -5,13 +5,48 @@ import { Responde } from "../entity/Responde.entity.js";
 export async function createRespondeService(id_usuario, id_quizz, correctas, tiempo_segundos = null, respuestas_detalle = null) {
     try {
         const respondeRepo = AppDataSource.getRepository(Responde);
+        
+        // Si hay respuestas_detalle, verificar si está incompleto y rellenar preguntas faltantes como incorrectas
+        let respuestasCompletas = respuestas_detalle;
+        
+        if (respuestas_detalle && Array.isArray(respuestas_detalle) && respuestas_detalle.length > 0) {
+            const queryPreguntas = `
+                SELECT p.id_pregunta, p.texto as texto_pregunta
+                FROM pregunta p
+                WHERE p.id_quizz = $1
+                ORDER BY p.id_pregunta
+            `;
+            const preguntasQuiz = await AppDataSource.query(queryPreguntas, [id_quizz]);
+            
+            if (preguntasQuiz && preguntasQuiz.length > 0) {
+                // IDs de preguntas respondidas
+                const preguntasRespondidas = new Set(respuestas_detalle.map(r => r.id_pregunta));
+                
+                // Rellenar preguntas no respondidas como incorrectas
+                const preguntasFaltantes = preguntasQuiz.filter(p => !preguntasRespondidas.has(p.id_pregunta));
+                
+                if (preguntasFaltantes.length > 0) {
+                    console.log(`[Responde Service] Quiz ${id_quizz}: Rellenando ${preguntasFaltantes.length} preguntas no respondidas como incorrectas`);
+                    
+                    preguntasFaltantes.forEach(pregunta => {
+                        respuestasCompletas.push({
+                            id_pregunta: pregunta.id_pregunta,
+                            id_respuesta_seleccionada: null,
+                            es_correcta: false,
+                            texto_pregunta: pregunta.texto_pregunta,
+                            texto_respuesta: "Sin respuesta (abandonado)"
+                        });
+                    });
+                }
+            }
+        }
 
         const nuevoResponde = {
             id_usuario: id_usuario,
             id_quizz: id_quizz,
             correctas: correctas,
             tiempo_segundos: tiempo_segundos,
-            respuestas_detalle: respuestas_detalle
+            respuestas_detalle: respuestasCompletas
             // fecha_responde se genera automáticamente con CURRENT_TIMESTAMP
         };
 

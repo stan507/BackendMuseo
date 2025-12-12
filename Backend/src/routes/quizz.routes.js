@@ -15,23 +15,11 @@ import { authenticate } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/authorization.middleware.js";
 
 const router = Router();
-
-// Obtener todos los quizzes - cualquier autenticado
 router.get("/", authenticate, getAllQuizzes);
-
-// Obtener quiz por exhibición - cualquier autenticado
 router.get("/exhibicion/:id_exhibicion", authenticate, getQuizzByExhibicion);
-
-// Obtener quiz por ID - cualquier autenticado
 router.get("/:id", authenticate, validate(getQuizzSchema, "params"), getQuizzById);
-
-// Crear quiz completo - solo admin y encargado
 router.post("/", authenticate, authorize("admin", "encargado"), validate(createQuizzSchema, "body"), createQuizz);
-
-// Actualizar quiz completo - solo admin y encargado
 router.put("/:id", authenticate, authorize("admin", "encargado"), validate(getQuizzSchema, "params"), validate(updateQuizzSchema, "body"), updateQuizz);
-
-// Eliminar quiz - solo admin y encargado
 router.delete("/:id", authenticate, authorize("admin", "encargado"), validate(getQuizzSchema, "params"), deleteQuizz);
 
 // Activar quiz - solo admin y encargado

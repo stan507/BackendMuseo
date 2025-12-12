@@ -9,8 +9,6 @@ export async function getQuizzByIdService(id) {
         const quizzRepo = AppDataSource.getRepository(Quizz);
         const preguntaRepo = AppDataSource.getRepository(Pregunta);
         const respuestaRepo = AppDataSource.getRepository(Respuesta);
-
-        // Obtener el quiz
         const quizz = await quizzRepo.findOne({
             where: { id_quizz: parseInt(id) }
         });
@@ -18,8 +16,6 @@ export async function getQuizzByIdService(id) {
         if (!quizz) {
             return [null, "Quiz no encontrado"];
         }
-
-        // Obtener preguntas del quiz
         const preguntas = await preguntaRepo.find({
             where: { id_quizz: quizz.id_quizz }
         });
@@ -43,8 +39,6 @@ export async function getQuizzByIdService(id) {
                 };
             })
         );
-
-        // Construir respuesta completa
         const quizzCompleto = {
             id_quizz: quizz.id_quizz,
             id_usuario: quizz.id_usuario,
@@ -61,8 +55,6 @@ export async function getQuizzByIdService(id) {
         return [null, "Error interno del servidor"];
     }
 }
-
-// Obtener todos los quizzes
 export async function getAllQuizzesService() {
     try {
         const quizzRepo = AppDataSource.getRepository(Quizz);
@@ -76,15 +68,11 @@ export async function getAllQuizzesService() {
         return [null, "Error al obtener quizzes"];
     }
 }
-
-// Obtener quiz por exhibición
 export async function getQuizzByExhibicionService(id_exhibicion) {
     try {
         const quizzRepo = AppDataSource.getRepository(Quizz);
         const preguntaRepo = AppDataSource.getRepository(Pregunta);
         const respuestaRepo = AppDataSource.getRepository(Respuesta);
-
-        // Buscar TODOS los quizzes de la exhibición
         const quizzes = await quizzRepo.find({
             where: { id_exhibicion },
             order: { fecha_creacion: 'DESC' }
@@ -97,7 +85,6 @@ export async function getQuizzByExhibicionService(id_exhibicion) {
         // Procesar todos los quizzes
         const quizzesCompletos = await Promise.all(
             quizzes.map(async (quizz) => {
-                // Obtener preguntas del quiz
                 const preguntas = await preguntaRepo.find({
                     where: { id_quizz: quizz.id_quizz }
                 });
@@ -147,8 +134,6 @@ export async function getFirstQuizzByExhibicionService(id_exhibicion) {
         const quizzRepo = AppDataSource.getRepository(Quizz);
         const preguntaRepo = AppDataSource.getRepository(Pregunta);
         const respuestaRepo = AppDataSource.getRepository(Respuesta);
-
-        // Buscar primer quiz por exhibición
         const quizz = await quizzRepo.findOne({
             where: { id_exhibicion },
             order: { fecha_creacion: 'DESC' }
@@ -157,8 +142,6 @@ export async function getFirstQuizzByExhibicionService(id_exhibicion) {
         if (!quizz) {
             return [null, "No hay quiz para esta exhibición"];
         }
-
-        // Obtener preguntas y respuestas
         const preguntas = await preguntaRepo.find({
             where: { id_quizz: quizz.id_quizz }
         });
@@ -199,8 +182,6 @@ export async function getFirstQuizzByExhibicionService(id_exhibicion) {
         return [null, "Error interno del servidor"];
     }
 }
-
-// Crear quiz completo (nested: quiz + preguntas + respuestas)
 export async function createQuizzService(id_usuario, id_exhibicion, titulo, preguntas) {
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();
@@ -210,14 +191,10 @@ export async function createQuizzService(id_usuario, id_exhibicion, titulo, preg
         const quizzRepo = queryRunner.manager.getRepository(Quizz);
         const preguntaRepo = queryRunner.manager.getRepository(Pregunta);
         const respuestaRepo = queryRunner.manager.getRepository(Respuesta);
-        
-        // 1. Desactivar todos los quizzes de esta exhibición
         await quizzRepo.update(
             { id_exhibicion },
             { es_activo: false }
         );
-        
-        // 2. Crear el quiz nuevo como activo
         const nuevoQuizz = await quizzRepo.save({
             id_usuario,
             id_exhibicion,
@@ -225,16 +202,12 @@ export async function createQuizzService(id_usuario, id_exhibicion, titulo, preg
             cant_preguntas: preguntas.length,
             es_activo: true
         });
-        
-        // 2. Crear preguntas y respuestas
         for (const preguntaData of preguntas) {
             const nuevaPregunta = await preguntaRepo.save({
                 id_quizz: nuevoQuizz.id_quizz,
                 titulo: preguntaData.titulo,
                 texto: preguntaData.texto
             });
-            
-            // 3. Crear respuestas de esta pregunta
             for (const respuestaData of preguntaData.respuestas) {
                 await respuestaRepo.save({
                     id_pregunta: nuevaPregunta.id_pregunta,
@@ -256,8 +229,6 @@ export async function createQuizzService(id_usuario, id_exhibicion, titulo, preg
         await queryRunner.release();
     }
 }
-
-// Actualizar quiz completo (elimina preguntas/respuestas antiguas y crea nuevas)
 export async function updateQuizzService(id_quizz, id_exhibicion, titulo, preguntas) {
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();
@@ -267,52 +238,38 @@ export async function updateQuizzService(id_quizz, id_exhibicion, titulo, pregun
         const quizzRepo = queryRunner.manager.getRepository(Quizz);
         const preguntaRepo = queryRunner.manager.getRepository(Pregunta);
         const respuestaRepo = queryRunner.manager.getRepository(Respuesta);
-        
-        // 1. Verificar que el quiz existe
         const quizz = await quizzRepo.findOne({ where: { id_quizz } });
         if (!quizz) {
             await queryRunner.rollbackTransaction();
             return [null, "Quiz no encontrado"];
         }
-        
-        // 2. Obtener preguntas existentes
         const preguntasExistentes = await preguntaRepo.find({ 
             where: { id_quizz },
             relations: ['respuestas']
         });
-        
-        // 3. Actualizar quiz
         await quizzRepo.update({ id_quizz }, {
             id_exhibicion,
             titulo,
             cant_preguntas: preguntas.length
         });
-        
-        // 4. Actualizar o crear preguntas (preservando IDs cuando sea posible)
         for (let i = 0; i < preguntas.length; i++) {
             const preguntaData = preguntas[i];
             let preguntaActual;
             
             if (preguntasExistentes[i]) {
-                // Actualizar pregunta existente (preserva el ID)
                 await preguntaRepo.update(preguntasExistentes[i].id_pregunta, {
                     titulo: preguntaData.titulo,
                     texto: preguntaData.texto
                 });
                 preguntaActual = preguntasExistentes[i];
-                
-                // Eliminar respuestas antiguas de esta pregunta
                 await respuestaRepo.delete({ id_pregunta: preguntaActual.id_pregunta });
             } else {
-                // Crear nueva pregunta si hay más preguntas que antes
                 preguntaActual = await preguntaRepo.save({
                     id_quizz,
                     titulo: preguntaData.titulo,
                     texto: preguntaData.texto
                 });
             }
-            
-            // Crear nuevas respuestas
             for (const respuestaData of preguntaData.respuestas) {
                 await respuestaRepo.save({
                     id_pregunta: preguntaActual.id_pregunta,
@@ -321,8 +278,6 @@ export async function updateQuizzService(id_quizz, id_exhibicion, titulo, pregun
                 });
             }
         }
-        
-        // 5. Eliminar preguntas sobrantes si se redujeron
         if (preguntasExistentes.length > preguntas.length) {
             const preguntasAEliminar = preguntasExistentes.slice(preguntas.length);
             for (const pregunta of preguntasAEliminar) {
@@ -342,8 +297,6 @@ export async function updateQuizzService(id_quizz, id_exhibicion, titulo, pregun
         await queryRunner.release();
     }
 }
-
-// Eliminar quiz (validar que quede al menos 1)
 export async function deleteQuizzService(id_quizz) {
     try {
         const quizzRepo = AppDataSource.getRepository(Quizz);
@@ -359,8 +312,6 @@ export async function deleteQuizzService(id_quizz) {
         if (!quizz) {
             return [null, "Quiz no encontrado"];
         }
-        
-        // Eliminar (cascade eliminará preguntas y respuestas)
         await quizzRepo.delete({ id_quizz });
         
         return [{ message: "Quiz eliminado exitosamente" }, null];

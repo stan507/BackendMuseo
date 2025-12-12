@@ -109,7 +109,6 @@ export async function getVisitasByExhibicionService(id_exhibicion) {
  */
 export async function getEstadisticasService(desde, hasta) {
     try {
-        // Query para obtener visitas en el rango de fechas
         const queryVisitas = `
             SELECT 
                 v.id_visita,
@@ -124,8 +123,6 @@ export async function getEstadisticasService(desde, hasta) {
         `;
 
         const visitas = await AppDataSource.query(queryVisitas, [desde, hasta + ' 23:59:59']);
-
-        // Query para obtener respuestas de quizzes en el mismo rango
         const queryResponde = `
             SELECT 
                 r.id_responde,
@@ -209,8 +206,6 @@ export async function getEstadisticasService(desde, hasta) {
                 horaPunta = parseInt(hora);
             }
         });
-        
-        // Crear rango de 1 hora para la hora punta
         const rangoHorarioPico = {
             inicio: horaPunta,
             fin: horaPunta + 1,
@@ -381,9 +376,8 @@ export async function getEmbudoConversionService(desde, hasta) {
  * Obtener análisis detallado de un quiz específico
  * Devuelve estadísticas de cada pregunta con el porcentaje de cada respuesta
  */
-export async function getAnalisisQuizService(id_quiz) {
+export async function getAnalisisQuizService(id_quiz, fechaInicio = null, fechaFin = null) {
     try {
-        // Obtener información del quiz con sus preguntas y respuestas
         const queryQuiz = `
             SELECT 
                 q.id_quizz,
@@ -400,8 +394,6 @@ export async function getAnalisisQuizService(id_quiz) {
         if (!quiz || quiz.length === 0) {
             return [null, "Quiz no encontrado"];
         }
-
-        // Obtener todas las preguntas del quiz con sus respuestas
         const queryPreguntas = `
             SELECT 
                 p.id_pregunta,
@@ -436,20 +428,40 @@ export async function getAnalisisQuizService(id_quiz) {
                 });
             }
         });
+        let queryResponde;
+        let queryParams;
+        
+        if (fechaInicio && fechaFin) {
+            const desde = fechaInicio.toISOString().split('T')[0];
+            const hasta = fechaFin.toISOString().split('T')[0];
+            queryResponde = `
+                SELECT 
+                    r.id_responde,
+                    r.correctas,
+                    r.respuestas_detalle,
+                    r.fecha_responde
+                FROM responde r
+                WHERE r.id_quizz = $1 
+                AND r.respuestas_detalle IS NOT NULL
+                AND r.fecha_responde >= $2 
+                AND r.fecha_responde <= $3
+            `;
+            queryParams = [id_quiz, desde, hasta + ' 23:59:59'];
+        } else {
+            queryResponde = `
+                SELECT 
+                    r.id_responde,
+                    r.correctas,
+                    r.respuestas_detalle,
+                    r.fecha_responde
+                FROM responde r
+                WHERE r.id_quizz = $1 
+                AND r.respuestas_detalle IS NOT NULL
+            `;
+            queryParams = [id_quiz];
+        }
 
-        // Obtener todas las respuestas de este quiz desde tabla responde
-        const queryResponde = `
-            SELECT 
-                r.id_responde,
-                r.correctas,
-                r.respuestas_detalle,
-                r.fecha_responde
-            FROM responde r
-            WHERE r.id_quizz = $1 
-            AND r.respuestas_detalle IS NOT NULL
-        `;
-
-        const respuestas = await AppDataSource.query(queryResponde, [id_quiz]);
+        const respuestas = await AppDataSource.query(queryResponde, queryParams);
 
         // Contar respuestas por pregunta
         const estadisticasPorPregunta = {};

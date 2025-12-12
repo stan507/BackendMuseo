@@ -7,8 +7,6 @@ import { authenticate } from '../middlewares/auth.middleware.js';
 import { upload } from '../config/multer.config.js';
 
 const router = Router();
-
-// --- RUTAS PROTEGIDAS PARA LA APP DE UNITY Y ADMIN ---
 router.get("/presigned-url", authenticate, validate(getPresignedUrlSchema, 'query'), handleGetUrl);
 router.get("/list-files", authenticate, validate(listFilesSchema, 'query'), handleListFiles);
 
